@@ -13,6 +13,8 @@ export type { OutputOptions } from "./output.js";
 export { installSkill } from "./install-skill.js";
 export type { InstallSkillOptions } from "./install-skill.js";
 
+export { detectDevServer } from "./detect.js";
+
 export {
   PikrError,
   ChromeNotFoundError,

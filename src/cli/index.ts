@@ -10,6 +10,7 @@ import {
   toSelection,
   writeSelection,
   defaultLogPath,
+  detectDevServer,
   installSkill,
   PikrError,
 } from "../core/index.js";
@@ -36,12 +37,6 @@ program
       url: string | undefined,
       opts: { connect?: string; log?: string; clipboard: boolean }
     ) => {
-      // If no args and no --connect, show help
-      if (!url && !opts.connect) {
-        program.help();
-        return;
-      }
-
       try {
         let session: BrowserSession;
         let pageUrl: string;
@@ -52,9 +47,28 @@ program
           pageUrl = await session.page.url();
           console.error(`pikr: connected to ${pageUrl}`);
         } else {
-          console.error(`pikr: opening ${url}...`);
-          session = await launchBrowser({ url: url! });
-          pageUrl = url!;
+          let targetUrl = url;
+
+          // Auto-detect dev server if no URL provided
+          if (!targetUrl) {
+            console.error("pikr: no URL provided, scanning for dev server...");
+            const detected = await detectDevServer();
+            if (detected) {
+              targetUrl = detected;
+              console.error(`pikr: found ${detected}`);
+            } else {
+              console.error("pikr: no dev server found on common ports (3000, 5173, 8080, ...)\n");
+              console.error("Usage: pikr <url>\n");
+              console.error("  pikr http://localhost:3000");
+              console.error("  pikr --connect ws://localhost:9222\n");
+              process.exit(1);
+              return;
+            }
+          }
+
+          console.error(`pikr: opening ${targetUrl}...`);
+          session = await launchBrowser({ url: targetUrl });
+          pageUrl = targetUrl;
         }
 
         const sessionId = generateSessionId();
