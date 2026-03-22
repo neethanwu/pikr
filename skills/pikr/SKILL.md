@@ -84,16 +84,16 @@ kill %1 2>/dev/null
 If the user pastes pikr output directly (instead of using the log file), it looks like:
 
 ```
-<pikr url="http://localhost:3000/page">
-<element selector="div.hero > button.cta">
+pikr: div.hero > button.cta
+url: http://localhost:3000/page
+ancestry: section.hero > div.hero-content > [this]
+
 <button class="cta btn-primary">Get Started</button>
-</element>
-<styles>background: #2563eb; color: #fff; border-radius: 8px;</styles>
-<ancestry>section.hero > div.hero-content > [this]</ancestry>
-</pikr>
+
+styles: background-color: #2563eb; color: #fff; border-radius: 8px
 ```
 
-Recognize and parse this format when you see it pasted into the conversation.
+Recognize text starting with `pikr:` as a pikr selection. The HTML is the main content between the header and styles.
 
 ## Troubleshooting
 

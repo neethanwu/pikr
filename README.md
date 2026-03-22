@@ -29,14 +29,14 @@ npx pikr http://localhost:3000
 
 ## What gets captured
 
-```xml
-<pikr url="http://localhost:3000/orders">
-<element selector="form.order-form > button.submit">
+```
+pikr: form.order-form > button.submit
+url: http://localhost:3000/orders
+ancestry: form.order-form > div.actions > [this]
+
 <button class="submit btn-primary">Submit Order</button>
-</element>
-<styles>background-color: rgb(37, 99, 235); color: rgb(255, 255, 255); border-radius: 8px</styles>
-<ancestry>form.order-form > div.actions > [this]</ancestry>
-</pikr>
+
+styles: background-color: #2563eb; color: #fff; border-radius: 8px
 ```
 
 Every capture is also logged to `~/.pikr/selections.jsonl` for agent access.

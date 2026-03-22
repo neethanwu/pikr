@@ -61,13 +61,16 @@ describe("toSelection", () => {
 });
 
 describe("toClipboardText", () => {
-  it("produces valid <pikr> XML envelope", () => {
+  it("starts with pikr: selector header", () => {
     const sel = toSelection(mockEvent, "pikr-123-abc", "http://localhost:3000");
     const text = toClipboardText(sel);
-    expect(text).toContain('<pikr url="http://localhost:3000">');
-    expect(text).toContain("</pikr>");
-    expect(text).toContain('<element selector="div.hero > button.cta">');
-    expect(text).toContain("</element>");
+    expect(text).toMatch(/^pikr: div\.hero > button\.cta/);
+  });
+
+  it("includes url line", () => {
+    const sel = toSelection(mockEvent, "pikr-123-abc", "http://localhost:3000");
+    const text = toClipboardText(sel);
+    expect(text).toContain("url: http://localhost:3000");
   });
 
   it("includes element HTML", () => {
@@ -87,31 +90,31 @@ describe("toClipboardText", () => {
   it("includes ancestry", () => {
     const sel = toSelection(mockEvent, "pikr-123-abc", "http://localhost:3000");
     const text = toClipboardText(sel);
-    expect(text).toContain("<ancestry>section.hero > div.hero-content > [this]</ancestry>");
+    expect(text).toContain("ancestry: section.hero > div.hero-content > [this]");
   });
 
-  it("omits <source> when component and filePath are null", () => {
+  it("omits source when component and filePath are null", () => {
     const sel = toSelection(mockEvent, "pikr-123-abc", "http://localhost:3000");
     const text = toClipboardText(sel);
-    expect(text).not.toContain("<source");
+    expect(text).not.toContain("source:");
   });
 
-  it("includes <source> when component is set", () => {
+  it("includes source when component is set", () => {
     const sel = toSelection(mockEvent, "pikr-123-abc", "http://localhost:3000");
     sel.component = "HeroButton";
     sel.filePath = "src/components/Hero.tsx";
     const text = toClipboardText(sel);
-    expect(text).toContain('<source component="HeroButton" file="src/components/Hero.tsx" />');
+    expect(text).toContain("source: HeroButton in src/components/Hero.tsx");
   });
 
-  it("omits <styles> when styles object is empty", () => {
+  it("omits styles when styles object is empty", () => {
     const sel = toSelection(
       { ...mockEvent, styles: {} },
       "pikr-123-abc",
       "http://localhost:3000"
     );
     const text = toClipboardText(sel);
-    expect(text).not.toContain("<styles>");
+    expect(text).not.toContain("styles:");
   });
 });
 

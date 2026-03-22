@@ -397,27 +397,44 @@ function _initOverlay() {
     return parts.join(" > ");
   }
 
+  // Convert rgb(r, g, b) to #hex for conciseness
+  function rgbToHex(rgb) {
+    var m = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    if (!m) return rgb;
+    return "#" + ((1 << 24) + (+m[1] << 16) + (+m[2] << 8) + +m[3]).toString(16).slice(1);
+  }
+
+  // Round pixel values: 277.336px → 277px
+  function cleanValue(v) {
+    return v.replace(/(\d+\.\d+)px/g, function (_, n) { return Math.round(+n) + "px"; });
+  }
+
   function getKeyStyles(el) {
-    const computed = window.getComputedStyle(el);
-    const styles = {};
-    const pairs = [
+    var computed = window.getComputedStyle(el);
+    var styles = {};
+    var body = window.getComputedStyle(document.body);
+    var pairs = [
+      // Only authored/meaningful styles — skip defaults and layout-computed values
       ["background-color", function (v) { return v !== "rgba(0, 0, 0, 0)" && v !== "transparent"; }],
-      ["color", function () { return true; }],
-      ["font-size", function () { return true; }],
+      ["color", function (v) { return v !== body.color; }], // skip if same as body
+      ["font-size", function (v) { return v !== body.fontSize && v !== "16px"; }], // skip default
       ["font-weight", function (v) { return v !== "400" && v !== "normal"; }],
       ["padding", function (v) { return v !== "0px"; }],
-      ["margin", function (v) { return v !== "0px"; }],
       ["border-radius", function (v) { return v !== "0px"; }],
       ["display", function (v) { return v !== "block" && v !== "inline"; }],
       ["position", function (v) { return v !== "static"; }],
-      ["width", function (v) { return v !== "auto"; }],
-      ["height", function (v) { return v !== "auto"; }],
       ["gap", function (v) { return v !== "normal" && v !== "0px"; }],
       ["opacity", function (v) { return v !== "1"; }],
+      // Skip: margin (usually layout), width/height (computed, not authored)
     ];
     for (var i = 0; i < pairs.length; i++) {
       var v = computed.getPropertyValue(pairs[i][0]);
-      if (v && pairs[i][1](v)) styles[pairs[i][0]] = v;
+      if (v && pairs[i][1](v)) {
+        // Clean up values
+        v = cleanValue(v);
+        if (pairs[i][0] === "background-color" || pairs[i][0] === "color") v = rgbToHex(v);
+        styles[pairs[i][0]] = v;
+      }
     }
     return styles;
   }

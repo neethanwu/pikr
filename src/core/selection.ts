@@ -39,18 +39,26 @@ export function toSelection(
 
 export function toClipboardText(sel: Selection): string {
   const lines: string[] = [];
-  lines.push(`<pikr url="${sel.url}">`);
-  lines.push(`<element selector="${sel.selector}">`);
-  lines.push(sel.html);
-  lines.push(`</element>`);
 
+  // Header
+  lines.push(`pikr: ${sel.selector}`);
+  lines.push(`url: ${sel.url}`);
+
+  // Source (from framework plugins)
   if (sel.component || sel.filePath) {
-    const attrs: string[] = [];
-    if (sel.component) attrs.push(`component="${sel.component}"`);
-    if (sel.filePath) attrs.push(`file="${sel.filePath}"`);
-    lines.push(`<source ${attrs.join(" ")} />`);
+    const parts: string[] = [];
+    if (sel.component) parts.push(sel.component);
+    if (sel.filePath) parts.push(`in ${sel.filePath}`);
+    lines.push(`source: ${parts.join(" ")}`);
   }
 
+  lines.push(`ancestry: ${sel.ancestry}`);
+
+  // HTML — the main content
+  lines.push("");
+  lines.push(sel.html);
+
+  // Styles — only if there are any
   const styleStr = Object.entries(sel.styles)
     .map(([k, v]) => {
       const cssProp = k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
@@ -58,11 +66,9 @@ export function toClipboardText(sel: Selection): string {
     })
     .join("; ");
   if (styleStr) {
-    lines.push(`<styles>${styleStr}</styles>`);
+    lines.push("");
+    lines.push(`styles: ${styleStr}`);
   }
-
-  lines.push(`<ancestry>${sel.ancestry}</ancestry>`);
-  lines.push(`</pikr>`);
 
   return lines.join("\n");
 }
