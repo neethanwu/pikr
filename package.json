@@ -1,0 +1,43 @@
+{
+  "name": "pikr",
+  "version": "0.1.0",
+  "description": "Universal element picker for terminal-based AI coding agents",
+  "type": "module",
+  "main": "dist/core/index.js",
+  "bin": {
+    "pikr": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc && cp src/core/inspector-overlay.js dist/core/inspector-overlay.js",
+    "dev": "tsc --watch",
+    "start": "node dist/cli/index.js",
+    "test": "bun vitest run",
+    "test:watch": "bun vitest"
+  },
+  "keywords": [
+    "element-picker",
+    "inspector",
+    "cdp",
+    "cli",
+    "ai-agent",
+    "chrome-devtools-protocol"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "skills"
+  ],
+  "dependencies": {
+    "clipboardy": "^4.0.0",
+    "commander": "^13.0.0",
+    "puppeteer-core": "^24.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.js
+*.d.ts
+*.js.map
+!src/core/inspector-overlay.js
+.pikr/
+docs/
+CONTEXT.md
