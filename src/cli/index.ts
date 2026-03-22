@@ -97,7 +97,12 @@ program
           const active = await plugins.detectAll(session.cdp);
           if (active.length > 0) {
             console.error(`pikr: plugins active — ${active.join(", ")}`);
+          } else {
+            console.error(`pikr: no framework plugins matched (source file mapping unavailable)`);
           }
+        } else {
+          console.error(`pikr: no plugins loaded — selections won't include source file paths`);
+          console.error(`pikr: (framework plugins with source mapping coming soon)`);
         }
 
         const sessionId = generateSessionId();
