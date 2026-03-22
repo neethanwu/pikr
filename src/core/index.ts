@@ -15,6 +15,9 @@ export type { InstallSkillOptions } from "./install-skill.js";
 
 export { detectDevServer } from "./detect.js";
 
+export { PluginManager } from "./plugins.js";
+export type { PikrPlugin, PluginEnrichment } from "./plugins.js";
+
 export {
   PikrError,
   ChromeNotFoundError,

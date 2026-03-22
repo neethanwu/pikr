@@ -11,6 +11,7 @@ import {
   writeSelection,
   defaultLogPath,
   detectDevServer,
+  PluginManager,
   installSkill,
   PikrError,
 } from "../core/index.js";
@@ -30,12 +31,18 @@ program
     "--connect <endpoint>",
     "Connect to an existing debug port (Tauri/remote)"
   )
+  .option("--plugin <path...>", "Load framework plugin(s) from file path or npm package")
   .option("--log <path>", "Custom log file path")
   .option("--no-clipboard", "Disable clipboard output")
   .action(
     async (
       url: string | undefined,
-      opts: { connect?: string; log?: string; clipboard: boolean }
+      opts: {
+        connect?: string;
+        plugin?: string[];
+        log?: string;
+        clipboard: boolean;
+      }
     ) => {
       try {
         let session: BrowserSession;
@@ -49,7 +56,6 @@ program
         } else {
           let targetUrl = url;
 
-          // Auto-detect dev server if no URL provided
           if (!targetUrl) {
             console.error("pikr: no URL provided, scanning for dev server...");
             const detected = await detectDevServer();
@@ -57,7 +63,9 @@ program
               targetUrl = detected;
               console.error(`pikr: found ${detected}`);
             } else {
-              console.error("pikr: no dev server found on common ports (3000, 5173, 8080, ...)\n");
+              console.error(
+                "pikr: no dev server found on common ports (3000, 5173, 8080, ...)\n"
+              );
               console.error("Usage: pikr <url>\n");
               console.error("  pikr http://localhost:3000");
               console.error("  pikr --connect ws://localhost:9222\n");
@@ -71,13 +79,41 @@ program
           pageUrl = targetUrl;
         }
 
+        // --- Plugins ---
+        const plugins = new PluginManager();
+
+        // Auto-discover from node_modules
+        await plugins.discover();
+
+        // Load explicitly specified plugins
+        if (opts.plugin) {
+          for (const p of opts.plugin) {
+            await plugins.load(p);
+          }
+        }
+
+        // Detect active frameworks
+        if (plugins.count > 0) {
+          const active = await plugins.detectAll(session.cdp);
+          if (active.length > 0) {
+            console.error(`pikr: plugins active — ${active.join(", ")}`);
+          }
+        }
+
         const sessionId = generateSessionId();
         const logPath = opts.log ?? defaultLogPath();
 
         // Inject inspector overlay
         await injectOverlay(session.page);
 
-        // Listen for element selections and close events
+        // Re-detect plugins after navigation (HMR full reload)
+        session.page.on("load", async () => {
+          if (plugins.count > 0) {
+            await plugins.detectAll(session.cdp);
+          }
+        });
+
+        // Listen for element selections
         let selectionCount = 0;
         await listenForSelections(
           session.cdp,
@@ -85,6 +121,15 @@ program
             selectionCount++;
             const currentUrl = await session.page.url();
             const selection = toSelection(event, sessionId, currentUrl);
+
+            // Enrich with plugin data if available
+            const enrichment = await plugins.enrich(session.cdp, event);
+            if (enrichment) {
+              selection.component = enrichment.componentName ?? null;
+              selection.filePath = enrichment.filePath
+                ? `${enrichment.filePath}${enrichment.line ? `:${enrichment.line}` : ""}${enrichment.col ? `:${enrichment.col}` : ""}`
+                : null;
+            }
 
             await writeSelection(selection, {
               clipboard: opts.clipboard,
@@ -94,12 +139,14 @@ program
             console.error(
               `\npikr: [${selectionCount}] captured <${event.tagName}> — ${event.selector}`
             );
+            if (enrichment?.componentName) {
+              console.error(`  component: ${enrichment.componentName}`);
+            }
             if (opts.clipboard) {
               console.error(`  -> clipboard`);
             }
             console.error(`  -> ${logPath}`);
           },
-          // ESC key closes pikr
           async () => {
             console.error(
               `\npikr: closed via ESC. ${selectionCount} element(s) captured.`
@@ -116,7 +163,6 @@ program
         );
         console.error(`pikr: session ${sessionId}`);
 
-        // Keep process alive until browser closes
         session.browser.on("disconnected", () => {
           console.error(
             `\npikr: browser closed. ${selectionCount} element(s) captured.`
@@ -124,16 +170,13 @@ program
           process.exit(0);
         });
 
-        // Graceful shutdown
         const shutdown = async () => {
           console.error(
             `\npikr: shutting down. ${selectionCount} element(s) captured.`
           );
           try {
             await session.browser.close();
-          } catch {
-            // browser may already be closed
-          }
+          } catch {}
           process.exit(0);
         };
 
