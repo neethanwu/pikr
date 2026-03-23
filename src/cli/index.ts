@@ -12,6 +12,7 @@ import {
   defaultLogPath,
   detectDevServers,
   PluginManager,
+  vitePlugin,
   installSkill,
   PikrError,
 } from "../core/index.js";
@@ -107,16 +108,15 @@ program
 
         // --- Plugins ---
         const plugins = new PluginManager();
-        await plugins.discover();
+        plugins.register(vitePlugin); // built-in: Vue/React source mapping
+        await plugins.discover();     // external: pikr-plugin-* from node_modules
         if (opts.plugin) {
           for (const p of opts.plugin) await plugins.load(p);
         }
 
-        if (plugins.count > 0) {
-          const active = await plugins.detectAll(session.cdp);
-          if (active.length > 0) {
-            log(`plugins: ${active.join(", ")}`);
-          }
+        const active = await plugins.detectAll(session.cdp);
+        if (active.length > 0) {
+          log(`source mapping: ${active.join(", ")}`);
         }
 
         const sessionId = generateSessionId();

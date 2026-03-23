@@ -37,6 +37,7 @@ pikr <port>                 # e.g. pikr 3000, pikr 5173
 ```
 pikr: form.order-form > button.submit
 url: http://localhost:3000/orders
+source: OrderForm in src/components/OrderForm.tsx:84
 ancestry: form.order-form > div.actions > [this]
 
 <button class="submit btn-primary">Submit Order</button>
@@ -46,6 +47,17 @@ styles: background-color: #2563eb; color: #fff; border-radius: 8px
 
 Every capture is also logged to `~/.pikr/selections.jsonl`.
 
+## Source mapping
+
+pikr auto-detects Vue and React projects and maps elements back to source files:
+
+- **Vue 3** — component name + file path via `__file` (works in dev mode, no extra setup)
+- **React 18** — component name + file:line:col via `_debugSource` (works in dev mode)
+- **React 19+** — best-effort file:line from `_debugStack` parsing
+- **React (any)** — precise file:line:col if `@react-dev-inspector/babel-plugin` is installed
+
+Source info appears in both clipboard output and the JSONL log.
+
 ## Agent integration
 
 pikr works with any terminal agent out of the box — just paste the clipboard output.
@@ -54,9 +66,7 @@ For deeper integration, agents can:
 
 1. Launch pikr as a background process: `pikr 3000 &`
 2. Read selections from `~/.pikr/selections.jsonl` (NDJSON, one entry per line)
-3. Each entry includes `selector`, `html`, `styles`, `ancestry`, and `sessionId`
-
-**Coming soon:** agent skills that let your AI agent launch pikr and read selections automatically.
+3. Each entry includes `selector`, `html`, `styles`, `ancestry`, `component`, `filePath`, and `sessionId`
 
 ## Options
 
@@ -72,15 +82,13 @@ pikr --plugin <path>       Load a framework plugin
 
 ## Plugins
 
-pikr captures raw DOM data by default. Framework plugins can enrich selections with component names and source file paths.
+pikr includes built-in source mapping for Vue and React. For other frameworks, you can write or install plugins:
 
 ```bash
 pikr --plugin ./my-plugin.js
 ```
 
 Plugins are also auto-discovered from `node_modules` (`pikr-plugin-*` or `@pikr/plugin-*`).
-
-**Coming soon:** built-in Vite and React source mapping.
 
 ## Requirements
 

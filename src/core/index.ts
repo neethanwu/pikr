@@ -18,6 +18,8 @@ export { detectDevServer, detectDevServers } from "./detect.js";
 export { PluginManager } from "./plugins.js";
 export type { PikrPlugin, PluginEnrichment } from "./plugins.js";
 
+export { vitePlugin } from "./plugins/vite.js";
+
 export {
   PikrError,
   ChromeNotFoundError,
