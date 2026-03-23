@@ -1,5 +1,8 @@
 # pikr
 
+[![npm](https://img.shields.io/npm/v/@neethan/pikr)](https://www.npmjs.com/package/@neethan/pikr)
+[![license](https://img.shields.io/npm/l/@neethan/pikr)](LICENSE)
+
 A CLI tool that lets you visually pick UI elements and get structured context for your AI agent. Click → clipboard → paste.
 
 ## Quickstart
