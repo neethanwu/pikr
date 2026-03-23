@@ -2,18 +2,20 @@
 
 A CLI tool that lets you visually pick UI elements and get structured context for your AI agent. Click → clipboard → paste.
 
-## Install
+## Quickstart
+
+Try it without installing:
+
+```bash
+npx pikr 3000
+```
+
+Or install globally — this also lets AI agents launch pikr and read selections directly:
 
 ```bash
 npm install -g pikr
-```
-
-## Quickstart
-
-```bash
-npm install -g pikr    # install globally
-npx pikr               # or run without installing
 pikr                   # auto-detect running dev server
+pikr 3000              # port shorthand
 ```
 
 ## How it works
