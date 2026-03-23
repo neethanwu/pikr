@@ -5,6 +5,8 @@
 
 A CLI tool that lets you visually pick UI elements and get structured context for your AI agent. Click → clipboard → paste.
 
+https://github.com/user-attachments/assets/4f31a091-c307-4621-b492-80e383316176
+
 ## Quickstart
 
 Try it without installing:
