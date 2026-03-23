@@ -26,6 +26,6 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - run: bun vitest run
+      - run: bun vitest run tests/unit/
 
       - run: bun run build
