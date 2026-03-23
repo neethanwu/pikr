@@ -45,23 +45,6 @@ styles: background-color: #2563eb; color: #fff; border-radius: 8px
 
 Every capture is also logged to `~/.pikr/selections.jsonl`.
 
-## Install
-
-For one-off use:
-
-```bash
-npx pikr 3000
-```
-
-For regular use or agent access:
-
-```bash
-npm install -g pikr
-pikr 3000
-```
-
-Global install lets AI agents launch pikr directly and read selections from the log file at `~/.pikr/selections.jsonl`.
-
 ## Agent integration
 
 pikr works with any terminal agent out of the box — just paste the clipboard output.
