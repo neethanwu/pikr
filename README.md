@@ -11,10 +11,10 @@ npm install -g pikr
 ## Quickstart
 
 ```bash
-pikr
+npm install -g pikr    # install globally
+npx pikr               # or run without installing
+pikr                   # auto-detect running dev server
 ```
-
-pikr auto-detects your running dev server. Or specify a port: `pikr 3000`
 
 ## How it works
 
