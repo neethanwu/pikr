@@ -10,22 +10,20 @@ Point at a UI element in your running app. Structured context goes to clipboard.
 npx pikr
 ```
 
-That's it. pikr scans common ports (3000, 5173, 8080, ...) and opens your dev server automatically.
-
-Or specify a URL:
+pikr auto-detects your running dev server. Or specify a port:
 
 ```bash
-npx pikr http://localhost:3000
+npx pikr 3000
 ```
 
 ## How it works
 
 1. pikr opens a Chromium window showing your app
-2. Press **⌘/Ctrl+Shift+X** to toggle inspect mode
+2. Click the pikr pill to toggle inspect mode
 3. Hover to highlight elements, click to capture
 4. Structured context is copied to clipboard
 5. Paste into any terminal agent (Claude Code, Codex, OpenCode, Amp, ...)
-6. Press **ESC** to close
+6. Press **ESC** to exit inspect mode
 
 ## What gets captured
 
@@ -39,47 +37,26 @@ ancestry: form.order-form > div.actions > [this]
 styles: background-color: #2563eb; color: #fff; border-radius: 8px
 ```
 
-Every capture is also logged to `~/.pikr/selections.jsonl` for agent access.
+Every capture is also logged to `~/.pikr/selections.jsonl`.
 
 ## Options
 
 ```
-pikr [url]                  Open URL (or auto-detect dev server)
-pikr --connect <endpoint>   Connect to a debug port (Tauri, remote)
-pikr --log <path>           Custom log file path
-pikr --no-clipboard         Log only, skip clipboard
-pikr install-skill          Install Claude Code skill
-pikr install-skill --local  Install to project .claude/skills/
+pikr                       Auto-detect dev server
+pikr 3000                  Port shorthand
+pikr localhost:3000        URL without http://
+pikr http://localhost:3000 Full URL
+pikr --connect <endpoint>  Connect to debug port (Tauri)
+pikr --log <path>          Custom log file path
+pikr --no-clipboard        Log only, skip clipboard
 ```
 
 ## Tauri support
 
-Connect to a Tauri app's webview debug port:
-
 ```bash
-# macOS: launch Tauri with inspector enabled
 WEBKIT_INSPECTOR_SERVER=0.0.0.0:9222 cargo tauri dev
-
-# Connect pikr
 pikr --connect http://localhost:9222
 ```
-
-## Claude Code skill
-
-Install the skill so the agent can launch pikr and read selections automatically:
-
-```bash
-pikr install-skill
-```
-
-Then say "open pikr" or let the agent suggest it when you describe a UI element.
-
-## How it's built
-
-- **puppeteer-core** — launches system Chrome via CDP, no bundled browser
-- **JS-injected overlay** — works on any page, any framework, Tauri webviews
-- **Clipboard-first** — universal interface, works with every agent
-- **JSONL log** — structured selections for agent file access
 
 ## Requirements
 

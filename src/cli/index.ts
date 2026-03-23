@@ -65,6 +65,16 @@ program
         } else {
           let targetUrl = url;
 
+          // Shorthand: pikr 3000 → http://localhost:3000
+          //           pikr localhost:3000 → http://localhost:3000
+          if (targetUrl) {
+            if (/^\d+$/.test(targetUrl)) {
+              targetUrl = `http://localhost:${targetUrl}`;
+            } else if (!targetUrl.startsWith("http")) {
+              targetUrl = `http://${targetUrl}`;
+            }
+          }
+
           if (!targetUrl) {
             log("scanning for dev server...");
             const detected = await detectDevServer();
@@ -73,8 +83,9 @@ program
               log(`found ${detected}`);
             } else {
               console.error(`\n  ${BRAND} ${DIM}no dev server found${RESET}\n`);
-              console.error(`  ${DIM}Usage:${RESET}  pikr http://localhost:3000`);
-              console.error(`          pikr --connect ws://localhost:9222\n`);
+              console.error(`  ${DIM}Usage:${RESET}  pikr              ${DIM}auto-detect${RESET}`);
+              console.error(`          pikr 3000          ${DIM}port shorthand${RESET}`);
+              console.error(`          pikr localhost:3000 ${DIM}full URL${RESET}\n`);
               process.exit(1);
               return;
             }
