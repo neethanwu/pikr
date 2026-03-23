@@ -193,12 +193,20 @@ function _initOverlay() {
     isDragging = false;
     banner.style.cursor = "grab";
 
-    // Snap to nearest horizontal edge if within 80px
+    // Snap to nearest edge (all 4 sides)
     clampPosition();
     var rect = banner.getBoundingClientRect();
-    var vw = window.innerWidth;
-    if (rect.left < 80) posX = 12;
-    else if (rect.right > vw - 80) posX = vw - rect.width - 12;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var m = bannerCollapsed ? 4 : 12;
+    var distL = rect.left, distR = vw - rect.right;
+    var distT = rect.top, distB = vh - rect.bottom;
+    var minDist = Math.min(distL, distR, distT, distB);
+    if (minDist < 80) {
+      if (minDist === distL) posX = m;
+      else if (minDist === distR) posX = vw - rect.width - m;
+      else if (minDist === distT) posY = m;
+      else posY = vh - rect.height - m;
+    }
     applyPosition();
 
     document.removeEventListener("pointermove", onBannerPointerMove, true);
@@ -250,16 +258,12 @@ function _initOverlay() {
   }
 
   // --- Banner rendering (compact pill with pick icon) ---
-  // Cursor-pick icon: small rounded square with arrow cursor
-  var pickIconLight = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:0.4">' +
-    '<rect x="4" y="4" width="10" height="10" rx="2" stroke="#292524" stroke-width="1.3"/>' +
-    '<path d="M2 2l4.5 10.5 1.5-3.5 3.5-1.5z" fill="#292524" opacity="0.6"/></svg>';
-  var pickIconDark = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:0.5">' +
-    '<rect x="4" y="4" width="10" height="10" rx="2" stroke="#fafaf9" stroke-width="1.3"/>' +
-    '<path d="M2 2l4.5 10.5 1.5-3.5 3.5-1.5z" fill="' + T.accent + '"/></svg>';
-  var pickIconActive = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">' +
-    '<rect x="4" y="4" width="10" height="10" rx="2" stroke="' + T.accent + '" stroke-width="1.3"/>' +
-    '<path d="M2 2l4.5 10.5 1.5-3.5 3.5-1.5z" fill="' + T.accent + '"/></svg>';
+  // Clean cursor arrow icon — simple, recognizable
+  function pickIcon(color, opacity) {
+    return '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;opacity:' + (opacity || 1) + '">' +
+      '<path d="M1.5 1l4 11 1.5-4 4-1.5z" fill="' + color + '"/>' +
+      '<path d="M7.5 8.5L11 12" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  }
 
   function collapseBanner() {
     if (bannerCollapsed) return;
@@ -293,8 +297,8 @@ function _initOverlay() {
         '<div style="display:flex;align-items:center;gap:6px;padding:7px 12px">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:' + T.accent + ';flex-shrink:0;' +
         (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>' +
-        '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:' + T.accent + '">pikr</span>' +
-        pickIconActive +
+        '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:rgba(250,250,249,0.85)">pikr</span>' +
+        pickIcon("rgba(250,250,249,0.4)") +
         '</div>';
     } else {
       banner.style.backgroundColor = "rgba(255, 252, 249, 0.92)";
@@ -303,7 +307,7 @@ function _initOverlay() {
         '<div style="display:flex;align-items:center;gap:6px;padding:7px 12px">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:#d6d3d1;flex-shrink:0"></div>' +
         '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:#292524">pikr</span>' +
-        pickIconLight +
+        pickIcon("rgba(41,37,36,0.3)") +
         '</div>';
     }
   }
