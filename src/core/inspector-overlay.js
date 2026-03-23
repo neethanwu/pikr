@@ -131,7 +131,7 @@ function _initOverlay() {
     position: "fixed",
     zIndex: "2147483647", borderRadius: "20px",
     fontFamily: T.font, fontSize: "13px",
-    cursor: "pointer", userSelect: "none",
+    cursor: "grab", userSelect: "none",
     boxShadow: T.shadow,
     transition: fullTransition,
     opacity: "0",
@@ -202,6 +202,8 @@ function _initOverlay() {
 
   // --- Drag ---
   function onBannerPointerDown(e) {
+    // Don't drag from the icon — that's the click-to-toggle target
+    if (e.target.closest("svg")) return;
     isDragging = true;
     dragStartX = e.clientX; dragStartY = e.clientY;
     dragPosX = posX; dragPosY = posY;
@@ -222,7 +224,7 @@ function _initOverlay() {
 
   function onBannerPointerUp(e) {
     isDragging = false;
-    banner.style.cursor = "pointer";
+    banner.style.cursor = "grab";
 
     // Always snap to nearest edge with animation
     clampPosition();
@@ -278,7 +280,7 @@ function _initOverlay() {
 
   // --- Banner rendering (compact pill with Lucide square-mouse-pointer icon) ---
   function pickIcon(color) {
-    return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;display:block">' +
+    return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;display:block;cursor:pointer">' +
       '<path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/>' +
       '<path d="M21 11V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/></svg>';
   }
