@@ -8,18 +8,18 @@ A CLI tool that lets you visually pick UI elements and get structured context fo
 npm install -g pikr
 ```
 
-Or run directly:
-
-```bash
-npx pikr
-```
-
 ## Quickstart
 
 ```bash
 pikr              # auto-detect running dev server
 pikr 3000         # port shorthand
 pikr localhost:3000
+```
+
+Or without installing:
+
+```bash
+npx pikr 3000
 ```
 
 ## How it works
