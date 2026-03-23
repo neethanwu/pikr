@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { vitePlugin } from "../../src/core/plugins/vite.js";
+import { sourceMapPlugin as vitePlugin } from "../../src/core/plugins/source-map.js";
 
 // Mock CDPSession
 function mockCDP(evaluateResult: unknown) {
@@ -118,7 +118,7 @@ describe("vitePlugin", () => {
     });
   });
 
-  it("has name 'vite'", () => {
-    expect(vitePlugin.name).toBe("vite");
+  it("has name 'source-map'", () => {
+    expect(vitePlugin.name).toBe("source-map");
   });
 });

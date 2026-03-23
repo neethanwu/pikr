@@ -12,7 +12,7 @@ import {
   defaultLogPath,
   detectDevServers,
   PluginManager,
-  vitePlugin,
+  sourceMapPlugin,
   installSkill,
   PikrError,
 } from "../core/index.js";
@@ -108,7 +108,7 @@ program
 
         // --- Plugins ---
         const plugins = new PluginManager();
-        plugins.register(vitePlugin); // built-in: Vue/React source mapping
+        plugins.register(sourceMapPlugin); // built-in: Vue/React source mapping
         await plugins.discover();     // external: pikr-plugin-* from node_modules
         if (opts.plugin) {
           for (const p of opts.plugin) await plugins.load(p);

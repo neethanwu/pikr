@@ -98,8 +98,8 @@ const ENRICH_SCRIPT = `
 })
 `;
 
-class VitePlugin implements PikrPlugin {
-  name = "vite";
+class SourceMapPlugin implements PikrPlugin {
+  name = "source-map";
   private framework: DetectedFramework = null;
 
   async detect(cdp: CDPSession): Promise<boolean> {
@@ -150,4 +150,4 @@ class VitePlugin implements PikrPlugin {
   }
 }
 
-export const vitePlugin = new VitePlugin();
+export const sourceMapPlugin = new SourceMapPlugin();
