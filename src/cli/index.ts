@@ -146,8 +146,16 @@ program
           }
         );
 
+        // Exit when browser closes (window close, crash, etc.)
         session.browser.on("disconnected", () => {
           console.error(`\n  ${BRAND} ${DIM}${selectionCount} element(s) captured${RESET}\n`);
+          process.exit(0);
+        });
+
+        // Also exit if the page/tab is closed
+        session.page.on("close", () => {
+          console.error(`\n  ${BRAND} ${DIM}${selectionCount} element(s) captured${RESET}\n`);
+          try { session.browser.close(); } catch {}
           process.exit(0);
         });
 

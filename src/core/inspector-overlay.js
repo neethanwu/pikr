@@ -131,7 +131,7 @@ function _initOverlay() {
     position: "fixed",
     zIndex: "2147483647", borderRadius: "20px",
     fontFamily: T.font, fontSize: "13px",
-    cursor: "grab", userSelect: "none",
+    cursor: "pointer", userSelect: "none",
     boxShadow: T.shadow,
     transition: fullTransition,
     opacity: "0",
@@ -222,7 +222,7 @@ function _initOverlay() {
 
   function onBannerPointerUp(e) {
     isDragging = false;
-    banner.style.cursor = "grab";
+    banner.style.cursor = "pointer";
 
     // Always snap to nearest edge with animation
     clampPosition();
@@ -285,26 +285,28 @@ function _initOverlay() {
 
   function renderBanner() {
 
-    // Shared inner layout: flex center, consistent gap and padding
-    var inner = 'display:flex;align-items:center;justify-content:center;gap:7px;padding:7px 12px;line-height:1';
+    // Dot, text, and icon all share the same 15px height lane for optical centering
+    var dot = 'width:7px;height:7px;border-radius:50%;flex-shrink:0';
+    var wm = 'font-size:13px;font-weight:700;letter-spacing:-0.03em;line-height:15px';
+    var row = 'display:flex;align-items:center;gap:8px;padding:8px 14px;height:15px';
 
     if (inspectMode) {
       banner.style.backgroundColor = "rgba(28, 25, 23, 0.9)";
       banner.style.border = "1px solid rgba(255, 255, 255, 0.1)";
       banner.innerHTML =
-        '<div style="' + inner + '">' +
-        '<div style="width:8px;height:8px;border-radius:50%;background:' + T.accent + ';flex-shrink:0;' +
+        '<div style="' + row + '">' +
+        '<div style="' + dot + ';background:' + T.accent + ';' +
         (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>' +
-        '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:rgba(250,250,249,0.85)">pikr</span>' +
+        '<span style="' + wm + ';color:rgba(250,250,249,0.85)">pikr</span>' +
         pickIcon("rgba(250,250,249,0.6)") +
         '</div>';
     } else {
       banner.style.backgroundColor = "rgba(255, 252, 249, 0.92)";
       banner.style.border = "1px solid rgba(0, 0, 0, 0.08)";
       banner.innerHTML =
-        '<div style="' + inner + '">' +
-        '<div style="width:8px;height:8px;border-radius:50%;background:#d6d3d1;flex-shrink:0"></div>' +
-        '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:#292524">pikr</span>' +
+        '<div style="' + row + '">' +
+        '<div style="' + dot + ';background:#d6d3d1"></div>' +
+        '<span style="' + wm + ';color:#292524">pikr</span>' +
         pickIcon("rgba(41,37,36,0.5)") +
         '</div>';
     }
