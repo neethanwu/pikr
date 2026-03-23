@@ -168,6 +168,9 @@ function _initOverlay() {
     posY = Math.max(m, Math.min(vh - h - m, posY));
   }
 
+  // Track which edge we're snapped to
+  var snappedEdge = "bottom"; // "left" | "right" | "top" | "bottom"
+
   // Always snap to nearest edge
   function snapToEdge(animate) {
     var w = banner.offsetWidth || 26;
@@ -178,10 +181,26 @@ function _initOverlay() {
     var distL = cx, distR = vw - cx;
     var distT = cy, distB = vh - cy;
     var min = Math.min(distL, distR, distT, distB);
-    if (min === distL) posX = m;
-    else if (min === distR) posX = vw - w - m;
-    else if (min === distT) posY = m;
+    if (min === distL) { posX = m; snappedEdge = "left"; }
+    else if (min === distR) { posX = vw - w - m; snappedEdge = "right"; }
+    else if (min === distT) { posY = m; snappedEdge = "top"; }
+    else { posY = vh - h - m; snappedEdge = "bottom"; }
+    applyPosition(animate);
+  }
+
+  // Re-snap to the SAME edge after size change (collapse/expand)
+  function resnapToCurrentEdge(animate) {
+    var w = banner.offsetWidth || 26;
+    var h = banner.offsetHeight || 26;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var m = bannerCollapsed ? 4 : 8;
+    if (snappedEdge === "left") posX = m;
+    else if (snappedEdge === "right") posX = vw - w - m;
+    else if (snappedEdge === "top") posY = m;
     else posY = vh - h - m;
+    // Also clamp the other axis
+    posX = Math.max(m, Math.min(vw - w - m, posX));
+    posY = Math.max(m, Math.min(vh - h - m, posY));
     applyPosition(animate);
   }
 
@@ -284,8 +303,8 @@ function _initOverlay() {
       (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>';
     banner.style.borderRadius = "50%";
     banner.style.padding = "8px";
-    // Re-snap to edge since dot is smaller
-    requestAnimationFrame(function () { snapToEdge(true); });
+    // Stay on same edge, just adjust for smaller size
+    requestAnimationFrame(function () { resnapToCurrentEdge(true); });
   }
 
   function expandBanner() {
@@ -294,8 +313,8 @@ function _initOverlay() {
     banner.style.borderRadius = "20px";
     banner.style.padding = "0";
     renderBanner();
-    // Re-snap since pill is bigger
-    requestAnimationFrame(function () { snapToEdge(true); });
+    // Stay on same edge, adjust for bigger size
+    requestAnimationFrame(function () { resnapToCurrentEdge(true); });
   }
 
   function renderBanner() {
@@ -312,7 +331,7 @@ function _initOverlay() {
         '<div style="width:8px;height:8px;border-radius:50%;background:' + T.accent + ';flex-shrink:0;' +
         (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>' +
         '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:rgba(250,250,249,0.85)">pikr</span>' +
-        pickIcon("rgba(250,250,249,0.35)") +
+        pickIcon("rgba(250,250,249,0.6)") +
         '</div>';
     } else {
       banner.style.backgroundColor = "rgba(255, 252, 249, 0.92)";
@@ -321,7 +340,7 @@ function _initOverlay() {
         '<div style="' + inner + '">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:#d6d3d1;flex-shrink:0"></div>' +
         '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:#292524">pikr</span>' +
-        pickIcon("rgba(41,37,36,0.25)") +
+        pickIcon("rgba(41,37,36,0.5)") +
         '</div>';
     }
   }
