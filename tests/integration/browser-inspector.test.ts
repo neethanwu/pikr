@@ -198,11 +198,11 @@ describe("full pipeline: overlay → click → selection", () => {
     await session.page.keyboard.up("Meta");
     await new Promise((r) => setTimeout(r, 100));
 
-    // Verify we're in inspect mode
-    const btnText = await session.page.evaluate(() => {
-      return document.getElementById("__pikr-toggle")?.textContent;
+    // Verify we're in inspect mode (cursor changes to crosshair)
+    const cursor = await session.page.evaluate(() => {
+      return document.documentElement.style.cursor;
     });
-    expect(btnText).toContain("pikr");
+    expect(cursor).toBe("crosshair");
 
     // Click the test button
     await session.page.click("#test-btn");

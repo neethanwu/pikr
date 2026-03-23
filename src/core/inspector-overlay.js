@@ -188,8 +188,9 @@ function _initOverlay() {
     applyPosition(animate);
   }
 
-  // Re-snap to the SAME edge after size change (collapse/expand)
-  function resnapToCurrentEdge(animate) {
+  // Re-snap to the SAME edge after size change (collapse/expand).
+  // No animation — position tracks size change silently.
+  function resnapToCurrentEdge() {
     var w = banner.offsetWidth || 26;
     var h = banner.offsetHeight || 26;
     var vw = window.innerWidth, vh = window.innerHeight;
@@ -198,10 +199,9 @@ function _initOverlay() {
     else if (snappedEdge === "right") posX = vw - w - m;
     else if (snappedEdge === "top") posY = m;
     else posY = vh - h - m;
-    // Also clamp the other axis
     posX = Math.max(m, Math.min(vw - w - m, posX));
     posY = Math.max(m, Math.min(vh - h - m, posY));
-    applyPosition(animate);
+    applyPosition(false); // instant, no transition
   }
 
   // Entrance
@@ -303,8 +303,8 @@ function _initOverlay() {
       (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>';
     banner.style.borderRadius = "50%";
     banner.style.padding = "8px";
-    // Stay on same edge, just adjust for smaller size
-    requestAnimationFrame(function () { resnapToCurrentEdge(true); });
+    // Track position continuously during CSS size transition
+    trackResize();
   }
 
   function expandBanner() {
@@ -313,8 +313,21 @@ function _initOverlay() {
     banner.style.borderRadius = "20px";
     banner.style.padding = "0";
     renderBanner();
-    // Stay on same edge, adjust for bigger size
-    requestAnimationFrame(function () { resnapToCurrentEdge(true); });
+    trackResize();
+  }
+
+  // Continuously resnap during CSS size transition so position tracks smoothly
+  var resizeTrackId = 0;
+  function trackResize() {
+    var id = ++resizeTrackId;
+    var frames = 0;
+    function tick() {
+      if (id !== resizeTrackId || frames > 20) return; // stop if superseded or done
+      resnapToCurrentEdge();
+      frames++;
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
   }
 
   function renderBanner() {
