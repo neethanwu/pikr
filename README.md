@@ -1,19 +1,25 @@
 # pikr
 
-Visual element picker for terminal AI agents. Click → clipboard → paste.
+A CLI tool that lets you visually pick UI elements and get structured context for your AI agent. Click → clipboard → paste.
 
-Point at any UI element in your running app. Structured context goes to clipboard. Paste into any terminal agent.
+## Install
 
-## Quickstart
+```bash
+npm install -g pikr
+```
+
+Or run directly:
 
 ```bash
 npx pikr
 ```
 
-pikr auto-detects your running dev server. Or specify a port:
+## Quickstart
 
 ```bash
-npx pikr 3000
+pikr              # auto-detect running dev server
+pikr 3000         # port shorthand
+pikr localhost:3000
 ```
 
 ## How it works
