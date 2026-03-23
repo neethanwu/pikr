@@ -19,19 +19,29 @@ import type { BrowserSession, SelectionEvent } from "../core/index.js";
 
 const version = "0.1.0";
 
+// --- Branded terminal output ---
+const DIM = "\x1b[2m";
+const RESET = "\x1b[0m";
+const BOLD = "\x1b[1m";
+const CORAL = "\x1b[38;2;255;107;86m";
+const LIME = "\x1b[38;2;163;230;53m";
+const STONE = "\x1b[38;2;168;162;158m";
+
+const BRAND = `${CORAL}${BOLD}pikr${RESET}`;
+
+function log(msg: string) {
+  console.error(`${STONE}${msg}${RESET}`);
+}
+
 program
   .name("pikr")
   .description("Universal element picker for terminal-based AI coding agents")
   .version(version);
 
-// Main command: pikr <url>
 program
   .argument("[url]", "URL to open (e.g., http://localhost:3000)")
-  .option(
-    "--connect <endpoint>",
-    "Connect to an existing debug port (Tauri/remote)"
-  )
-  .option("--plugin <path...>", "Load framework plugin(s) from file path or npm package")
+  .option("--connect <endpoint>", "Connect to an existing debug port (Tauri/remote)")
+  .option("--plugin <path...>", "Load framework plugin(s)")
   .option("--log <path>", "Custom log file path")
   .option("--no-clipboard", "Disable clipboard output")
   .action(
@@ -46,79 +56,67 @@ program
     ) => {
       try {
         let session: BrowserSession;
-        let pageUrl: string;
 
         if (opts.connect) {
-          console.error(`pikr: connecting to ${opts.connect}...`);
+          log(`connecting to ${opts.connect}...`);
           session = await connectBrowser({ endpoint: opts.connect });
-          pageUrl = await session.page.url();
-          console.error(`pikr: connected to ${pageUrl}`);
+          const pageUrl = await session.page.url();
+          log(`connected to ${pageUrl}`);
         } else {
           let targetUrl = url;
 
           if (!targetUrl) {
-            console.error("pikr: no URL provided, scanning for dev server...");
+            log("scanning for dev server...");
             const detected = await detectDevServer();
             if (detected) {
               targetUrl = detected;
-              console.error(`pikr: found ${detected}`);
+              log(`found ${detected}`);
             } else {
-              console.error(
-                "pikr: no dev server found on common ports (3000, 5173, 8080, ...)\n"
-              );
-              console.error("Usage: pikr <url>\n");
-              console.error("  pikr http://localhost:3000");
-              console.error("  pikr --connect ws://localhost:9222\n");
+              console.error(`\n  ${BRAND} ${DIM}no dev server found${RESET}\n`);
+              console.error(`  ${DIM}Usage:${RESET}  pikr http://localhost:3000`);
+              console.error(`          pikr --connect ws://localhost:9222\n`);
               process.exit(1);
               return;
             }
           }
 
-          console.error(`pikr: opening ${targetUrl}...`);
+          log(`opening ${targetUrl}...`);
           session = await launchBrowser({ url: targetUrl });
-          pageUrl = targetUrl;
         }
 
         // --- Plugins ---
         const plugins = new PluginManager();
-
-        // Auto-discover from node_modules
         await plugins.discover();
-
-        // Load explicitly specified plugins
         if (opts.plugin) {
-          for (const p of opts.plugin) {
-            await plugins.load(p);
-          }
+          for (const p of opts.plugin) await plugins.load(p);
         }
 
-        // Detect active frameworks
         if (plugins.count > 0) {
           const active = await plugins.detectAll(session.cdp);
           if (active.length > 0) {
-            console.error(`pikr: plugins active — ${active.join(", ")}`);
-          } else {
-            console.error(`pikr: no framework plugins matched (source file mapping unavailable)`);
+            log(`plugins: ${active.join(", ")}`);
           }
-        } else {
-          console.error(`pikr: no plugins loaded — selections won't include source file paths`);
-          console.error(`pikr: (framework plugins with source mapping coming soon)`);
         }
 
         const sessionId = generateSessionId();
         const logPath = opts.log ?? defaultLogPath();
 
-        // Inject inspector overlay
         await injectOverlay(session.page);
 
-        // Re-detect plugins after navigation (HMR full reload)
         session.page.on("load", async () => {
-          if (plugins.count > 0) {
-            await plugins.detectAll(session.cdp);
-          }
+          if (plugins.count > 0) await plugins.detectAll(session.cdp);
         });
 
-        // Listen for element selections
+        // --- Ready message ---
+        const isMac = process.platform === "darwin";
+        const toggle = isMac ? "⌘+Shift+X" : "Ctrl+Shift+X";
+        console.error(
+          `\n  ${BRAND} ${DIM}ready${RESET}\n\n` +
+          `  ${DIM}toggle inspect${RESET}  ${toggle}\n` +
+          `  ${DIM}close${RESET}           ESC\n`
+        );
+
+        // --- Listen ---
         let selectionCount = 0;
         await listenForSelections(
           session.cdp,
@@ -127,7 +125,6 @@ program
             const currentUrl = await session.page.url();
             const selection = toSelection(event, sessionId, currentUrl);
 
-            // Enrich with plugin data if available
             const enrichment = await plugins.enrich(session.cdp, event);
             if (enrichment) {
               selection.component = enrichment.componentName ?? null;
@@ -136,52 +133,29 @@ program
                 : null;
             }
 
-            await writeSelection(selection, {
-              clipboard: opts.clipboard,
-              logPath,
-            });
+            await writeSelection(selection, { clipboard: opts.clipboard, logPath });
 
-            console.error(
-              `\npikr: [${selectionCount}] captured <${event.tagName}> — ${event.selector}`
-            );
-            if (enrichment?.componentName) {
-              console.error(`  component: ${enrichment.componentName}`);
-            }
-            if (opts.clipboard) {
-              console.error(`  -> clipboard`);
-            }
-            console.error(`  -> ${logPath}`);
+            // Capture confirmation
+            const tag = `<${event.tagName}>`;
+            const source = enrichment?.componentName ? ` ${DIM}(${enrichment.componentName})${RESET}` : "";
+            const dest = opts.clipboard ? `${LIME}clipboard${RESET}` : `${DIM}${logPath}${RESET}`;
+            console.error(`  ${LIME}●${RESET} ${tag}${source} → ${dest}`);
           },
           async () => {
-            console.error(
-              `\npikr: closed via ESC. ${selectionCount} element(s) captured.`
-            );
-            try {
-              await session.browser.close();
-            } catch {}
+            console.error(`\n  ${BRAND} ${DIM}${selectionCount} element(s) captured${RESET}\n`);
+            try { await session.browser.close(); } catch {}
             process.exit(0);
           }
         );
 
-        console.error(
-          `\npikr: ready. Press Cmd/Ctrl+Shift+X to toggle inspect mode.`
-        );
-        console.error(`pikr: session ${sessionId}`);
-
         session.browser.on("disconnected", () => {
-          console.error(
-            `\npikr: browser closed. ${selectionCount} element(s) captured.`
-          );
+          console.error(`\n  ${BRAND} ${DIM}${selectionCount} element(s) captured${RESET}\n`);
           process.exit(0);
         });
 
         const shutdown = async () => {
-          console.error(
-            `\npikr: shutting down. ${selectionCount} element(s) captured.`
-          );
-          try {
-            await session.browser.close();
-          } catch {}
+          console.error(`\n  ${BRAND} ${DIM}${selectionCount} element(s) captured${RESET}\n`);
+          try { await session.browser.close(); } catch {}
           process.exit(0);
         };
 
@@ -189,17 +163,16 @@ program
         process.on("SIGTERM", shutdown);
       } catch (err) {
         if (err instanceof PikrError) {
-          console.error(`pikr: ${err.message}`);
+          console.error(`\n  ${BRAND} ${CORAL}${err.message}${RESET}\n`);
         } else {
           const message = err instanceof Error ? err.message : String(err);
-          console.error(`pikr: unexpected error — ${message}`);
+          console.error(`\n  ${BRAND} ${CORAL}${message}${RESET}\n`);
         }
         process.exit(1);
       }
     }
   );
 
-// Subcommand: pikr install-skill
 program
   .command("install-skill")
   .description("Install the pikr Claude Code skill")
@@ -207,12 +180,14 @@ program
   .action(async (opts: { local?: boolean }) => {
     try {
       const path = await installSkill({ local: opts.local ?? false });
-      console.error(`\nDone! The pikr skill is now available in Claude Code.`);
-      console.error(`  Location: ${path}`);
-      console.error(`  Usage: type "/pikr" or let the agent suggest it.\n`);
+      console.error(
+        `\n  ${BRAND} ${DIM}skill installed${RESET}\n\n` +
+        `  ${DIM}location${RESET}  ${path}\n` +
+        `  ${DIM}usage${RESET}     type "/pikr" or let the agent suggest it\n`
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`pikr: ${message}`);
+      console.error(`\n  ${BRAND} ${CORAL}${message}${RESET}\n`);
       process.exit(1);
     }
   });

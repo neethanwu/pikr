@@ -312,7 +312,7 @@ function _initOverlay() {
         '<div style="display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:13px;color:rgba(168,162,158,0.5)">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:' + T.accent + ';flex-shrink:0;' +
         (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>' +
-        '<span style="font-size:14px;font-weight:700;letter-spacing:-0.03em;color:#fafaf9">pikr</span>' +
+        '<span style="font-family:' + T.mono + ';font-size:14px;font-weight:700;letter-spacing:-0.02em;color:' + T.accent + '">pikr</span>' +
         sep() +
         '<span style="color:rgba(250,250,249,0.65)">Click to pick</span>' +
         sep() +
@@ -327,7 +327,7 @@ function _initOverlay() {
       banner.innerHTML =
         '<div style="display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:13px;color:rgba(120,113,108,0.5)">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:#d6d3d1;flex-shrink:0"></div>' +
-        '<span style="font-size:14px;font-weight:700;letter-spacing:-0.03em;color:#292524">pikr</span>' +
+        '<span style="font-family:' + T.mono + ';font-size:14px;font-weight:700;letter-spacing:-0.02em;color:#292524">pikr</span>' +
         sep() +
         '<span style="color:rgba(41,37,36,0.4)">Browse mode</span>' +
         sep() +
