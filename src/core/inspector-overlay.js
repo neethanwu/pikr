@@ -290,7 +290,7 @@ function _initOverlay() {
     // Dot, text, and icon all share the same 15px height lane for optical centering
     var dot = 'width:7px;height:7px;border-radius:50%;flex-shrink:0';
     var wm = 'font-size:13px;font-weight:700;letter-spacing:-0.03em;line-height:15px';
-    var row = 'display:flex;align-items:center;gap:8px;padding:8px 14px;height:15px';
+    var row = 'display:flex;align-items:center;gap:8px;padding:8px 14px';
 
     if (inspectMode) {
       banner.style.backgroundColor = "rgba(28, 25, 23, 0.9)";
