@@ -3,22 +3,16 @@ import type { PikrPlugin, PluginEnrichment } from "../plugins.js";
 import type { SelectionEvent } from "../inspector.js";
 
 /**
- * Built-in source mapping plugin for Vite projects.
+ * Built-in React source mapping plugin.
  *
- * Auto-detects Vue 3 and React (any bundler, not just Vite).
- * Maps clicked DOM elements to their source file + line number.
+ * Detects React (any bundler) and maps clicked elements to source files.
  *
  * Strategy (cascading, first match wins):
- *   1. data-inspector-* attributes (React, requires @react-dev-inspector/babel-plugin)
- *   2. __vueParentComponent.type.__file (Vue 3, built-in to dev mode)
- *   3. __reactFiber$*._debugSource (React 18, built-in to dev JSX transform)
- *   4. __reactFiber$*._debugStack parsing (React 19+, best-effort)
+ *   1. data-inspector-* attributes (requires @react-dev-inspector/babel-plugin)
+ *   2. __reactFiber$*._debugSource (React 18, built-in to dev JSX transform)
+ *   3. __reactFiber$*._debugStack parsing (React 19+, best-effort)
  */
 
-type DetectedFramework = "vue" | "react" | null;
-
-// The enrichment script runs in the browser via CDP Runtime.evaluate.
-// It walks up the DOM from the selected element, trying each strategy.
 const ENRICH_SCRIPT = `
 (function(selector) {
   var el = document.querySelector(selector);
@@ -37,23 +31,12 @@ const ENRICH_SCRIPT = `
       };
     }
 
-    // 2. Vue: __vueParentComponent
-    if (cur.__vueParentComponent) {
-      var comp = cur.__vueParentComponent;
-      var name = (comp.type && (comp.type.__name || comp.type.name)) || null;
-      var file = (comp.type && comp.type.__file) || null;
-      if (file) {
-        return { componentName: name, filePath: file, line: null, col: null };
-      }
-    }
-
-    // 3 & 4. React: find fiber via __reactFiber$* or __reactInternalInstance$*
+    // 2 & 3. Find fiber via __reactFiber$* or __reactInternalInstance$*
     var keys = Object.keys(cur);
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       if (k.indexOf('__reactFiber$') === 0 || k.indexOf('__reactInternalInstance$') === 0) {
         var fiber = cur[k];
-        // Walk up fiber tree to find component with source info
         while (fiber) {
           // React 18: _debugSource (structured object)
           if (fiber._debugSource) {
@@ -69,10 +52,8 @@ const ENRICH_SCRIPT = `
           // React 19+: _debugStack (Error object, parse V8 stack trace)
           if (fiber._debugStack && typeof fiber._debugStack === 'object') {
             var stack = fiber._debugStack.stack || String(fiber._debugStack);
-            // Match: "at ComponentName (http://localhost:5173/src/App.tsx?t=...:42:7)"
             var m = stack.match(/at\\s+(\\w+)\\s+\\(https?:\\/\\/[^/]+\\/(src\\/[^?:]+)[^:]*:(\\d+):(\\d+)\\)/);
             if (!m) {
-              // Also try: "at http://localhost:5173/src/App.tsx:42:7"
               m = stack.match(/at\\s+https?:\\/\\/[^/]+\\/(src\\/[^?:]+)[^:]*:(\\d+):(\\d+)/);
               if (m) m = [m[0], null, m[1], m[2], m[3]];
             }
@@ -88,7 +69,7 @@ const ENRICH_SCRIPT = `
           }
           fiber = fiber.return;
         }
-        break; // found a fiber key, don't check other keys
+        break;
       }
     }
 
@@ -98,23 +79,20 @@ const ENRICH_SCRIPT = `
 })
 `;
 
-class SourceMapPlugin implements PikrPlugin {
-  name = "source-map";
-  private framework: DetectedFramework = null;
+function escapeSelector(selector: string): string {
+  return selector.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+class ReactPlugin implements PikrPlugin {
+  name = "react";
 
   async detect(cdp: CDPSession): Promise<boolean> {
     try {
       const result = await cdp.send("Runtime.evaluate", {
-        expression: `(function() {
-          if (typeof window.__VUE__ !== 'undefined') return 'vue';
-          if (typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined') return 'react';
-          return null;
-        })()`,
+        expression: "typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined'",
         returnByValue: true,
       });
-
-      this.framework = (result.result.value as DetectedFramework) ?? null;
-      return this.framework !== null;
+      return result.result.value === true;
     } catch {
       return false;
     }
@@ -125,13 +103,8 @@ class SourceMapPlugin implements PikrPlugin {
     selection: SelectionEvent
   ): Promise<PluginEnrichment | null> {
     try {
-      // Escape selector for use in JS string
-      const escapedSelector = selection.selector
-        .replace(/\\/g, "\\\\")
-        .replace(/'/g, "\\'");
-
       const result = await cdp.send("Runtime.evaluate", {
-        expression: `${ENRICH_SCRIPT}('${escapedSelector}')`,
+        expression: `${ENRICH_SCRIPT}('${escapeSelector(selection.selector)}')`,
         returnByValue: true,
       });
 
@@ -150,4 +123,4 @@ class SourceMapPlugin implements PikrPlugin {
   }
 }
 
-export const sourceMapPlugin = new SourceMapPlugin();
+export const reactPlugin = new ReactPlugin();

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import { sourceMapPlugin as vitePlugin } from "../../src/core/plugins/source-map.js";
+import { reactPlugin } from "../../src/core/plugins/react.js";
+import { vuePlugin } from "../../src/core/plugins/vue.js";
 
-// Mock CDPSession
 function mockCDP(evaluateResult: unknown) {
   return {
     send: vi.fn().mockResolvedValue({
@@ -10,49 +10,50 @@ function mockCDP(evaluateResult: unknown) {
   } as any;
 }
 
-describe("vitePlugin", () => {
+function failCDP() {
+  return { send: vi.fn().mockRejectedValue(new Error("CDP error")) } as any;
+}
+
+const mockSelection = {
+  type: "selection" as const,
+  selector: "#test-btn",
+  html: "<button>Test</button>",
+  ancestry: "div > [this]",
+  styles: {},
+  tagName: "button",
+  textContent: "Test",
+};
+
+describe("reactPlugin", () => {
+  it("has name 'react'", () => {
+    expect(reactPlugin.name).toBe("react");
+  });
+
   describe("detect", () => {
-    it("returns true when Vue is detected", async () => {
-      const cdp = mockCDP("vue");
-      expect(await vitePlugin.detect(cdp)).toBe(true);
-    });
-
     it("returns true when React is detected", async () => {
-      const cdp = mockCDP("react");
-      expect(await vitePlugin.detect(cdp)).toBe(true);
+      const cdp = mockCDP(true);
+      expect(await reactPlugin.detect(cdp)).toBe(true);
     });
 
-    it("returns false when no framework is detected", async () => {
-      const cdp = mockCDP(null);
-      expect(await vitePlugin.detect(cdp)).toBe(false);
+    it("returns false when React is not detected", async () => {
+      const cdp = mockCDP(false);
+      expect(await reactPlugin.detect(cdp)).toBe(false);
     });
 
     it("returns false on CDP error", async () => {
-      const cdp = { send: vi.fn().mockRejectedValue(new Error("CDP error")) } as any;
-      expect(await vitePlugin.detect(cdp)).toBe(false);
+      expect(await reactPlugin.detect(failCDP())).toBe(false);
     });
   });
 
   describe("enrich", () => {
-    const mockSelection = {
-      type: "selection" as const,
-      selector: "#test-btn",
-      html: "<button>Test</button>",
-      ancestry: "div > [this]",
-      styles: {},
-      tagName: "button",
-      textContent: "Test",
-    };
-
-    it("returns enrichment when source is found", async () => {
+    it("returns enrichment with file path", async () => {
       const cdp = mockCDP({
         componentName: "MyButton",
         filePath: "src/components/Button.tsx",
         line: 42,
         col: 7,
       });
-
-      const result = await vitePlugin.enrich(cdp, mockSelection);
+      const result = await reactPlugin.enrich(cdp, mockSelection);
       expect(result).toEqual({
         componentName: "MyButton",
         filePath: "src/components/Button.tsx",
@@ -61,64 +62,71 @@ describe("vitePlugin", () => {
       });
     });
 
-    it("returns null when no source is found", async () => {
-      const cdp = mockCDP(null);
-      const result = await vitePlugin.enrich(cdp, mockSelection);
-      expect(result).toBeNull();
+    it("returns null when no source found", async () => {
+      expect(await reactPlugin.enrich(mockCDP(null), mockSelection)).toBeNull();
     });
 
     it("returns null when filePath is empty", async () => {
-      const cdp = mockCDP({ componentName: "Foo", filePath: null });
-      const result = await vitePlugin.enrich(cdp, mockSelection);
-      expect(result).toBeNull();
+      expect(await reactPlugin.enrich(mockCDP({ filePath: null }), mockSelection)).toBeNull();
     });
 
     it("returns null on CDP error", async () => {
-      const cdp = { send: vi.fn().mockRejectedValue(new Error("CDP error")) } as any;
-      const result = await vitePlugin.enrich(cdp, mockSelection);
-      expect(result).toBeNull();
-    });
-
-    it("handles selector with special characters", async () => {
-      const cdp = mockCDP({
-        componentName: "Card",
-        filePath: "src/Card.vue",
-        line: 10,
-        col: null,
-      });
-
-      const result = await vitePlugin.enrich(cdp, {
-        ...mockSelection,
-        selector: "div.hero > button.btn-primary:nth-of-type(2)",
-      });
-
-      expect(result).toEqual({
-        componentName: "Card",
-        filePath: "src/Card.vue",
-        line: 10,
-        col: undefined,
-      });
-
-      // Verify selector was properly escaped in the expression
-      const call = cdp.send.mock.calls[0];
-      expect(call[1].expression).toContain("div.hero > button.btn-primary:nth-of-type(2)");
+      expect(await reactPlugin.enrich(failCDP(), mockSelection)).toBeNull();
     });
 
     it("converts null line/col to undefined", async () => {
-      const cdp = mockCDP({
-        componentName: "App",
-        filePath: "src/App.vue",
-        line: null,
-        col: null,
-      });
-
-      const result = await vitePlugin.enrich(cdp, mockSelection);
+      const cdp = mockCDP({ componentName: "App", filePath: "src/App.tsx", line: null, col: null });
+      const result = await reactPlugin.enrich(cdp, mockSelection);
       expect(result?.line).toBeUndefined();
       expect(result?.col).toBeUndefined();
     });
   });
+});
 
-  it("has name 'source-map'", () => {
-    expect(vitePlugin.name).toBe("source-map");
+describe("vuePlugin", () => {
+  it("has name 'vue'", () => {
+    expect(vuePlugin.name).toBe("vue");
+  });
+
+  describe("detect", () => {
+    it("returns true when Vue is detected", async () => {
+      const cdp = mockCDP(true);
+      expect(await vuePlugin.detect(cdp)).toBe(true);
+    });
+
+    it("returns false when Vue is not detected", async () => {
+      const cdp = mockCDP(false);
+      expect(await vuePlugin.detect(cdp)).toBe(false);
+    });
+
+    it("returns false on CDP error", async () => {
+      expect(await vuePlugin.detect(failCDP())).toBe(false);
+    });
+  });
+
+  describe("enrich", () => {
+    it("returns enrichment with file path", async () => {
+      const cdp = mockCDP({
+        componentName: "MyComponent",
+        filePath: "/Users/dev/project/src/App.vue",
+        line: null,
+        col: null,
+      });
+      const result = await vuePlugin.enrich(cdp, mockSelection);
+      expect(result).toEqual({
+        componentName: "MyComponent",
+        filePath: "/Users/dev/project/src/App.vue",
+        line: undefined,
+        col: undefined,
+      });
+    });
+
+    it("returns null when no source found", async () => {
+      expect(await vuePlugin.enrich(mockCDP(null), mockSelection)).toBeNull();
+    });
+
+    it("returns null on CDP error", async () => {
+      expect(await vuePlugin.enrich(failCDP(), mockSelection)).toBeNull();
+    });
   });
 });

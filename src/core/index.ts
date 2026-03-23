@@ -18,7 +18,8 @@ export { detectDevServer, detectDevServers } from "./detect.js";
 export { PluginManager } from "./plugins.js";
 export type { PikrPlugin, PluginEnrichment } from "./plugins.js";
 
-export { sourceMapPlugin } from "./plugins/source-map.js";
+export { reactPlugin } from "./plugins/react.js";
+export { vuePlugin } from "./plugins/vue.js";
 
 export {
   PikrError,
