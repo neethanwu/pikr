@@ -155,8 +155,10 @@ function _initOverlay() {
   function clampPosition() {
     var rect = banner.getBoundingClientRect();
     var vw = window.innerWidth, vh = window.innerHeight;
-    posX = Math.max(12, Math.min(vw - rect.width - 12, posX));
-    posY = Math.max(12, Math.min(vh - rect.height - 12, posY));
+    // Collapsed dot can go closer to edge (4px), expanded pill needs margin (12px)
+    var margin = bannerCollapsed ? 4 : 12;
+    posX = Math.max(margin, Math.min(vw - rect.width - margin, posX));
+    posY = Math.max(margin, Math.min(vh - rect.height - margin, posY));
   }
 
   // Entrance
@@ -247,15 +249,17 @@ function _initOverlay() {
     }, 1400);
   }
 
-  // --- Banner rendering (compact pill) ---
-  function kbd(text, dark) {
-    var bg = dark ? "rgba(250,250,249,0.1)" : "rgba(28,25,23,0.06)";
-    var border = dark ? "rgba(250,250,249,0.1)" : "rgba(28,25,23,0.08)";
-    var color = dark ? "rgba(250,250,249,0.5)" : "rgba(41,37,36,0.45)";
-    return '<kbd style="font-family:' + T.mono + ';font-size:10px;padding:2px 5px;border-radius:3px;' +
-      'line-height:1.3;display:inline-block;letter-spacing:0.02em;' +
-      'background:' + bg + ';border:1px solid ' + border + ';color:' + color + '">' + text + '</kbd>';
-  }
+  // --- Banner rendering (compact pill with pick icon) ---
+  // Cursor-pick icon: small rounded square with arrow cursor
+  var pickIconLight = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:0.4">' +
+    '<rect x="4" y="4" width="10" height="10" rx="2" stroke="#292524" stroke-width="1.3"/>' +
+    '<path d="M2 2l4.5 10.5 1.5-3.5 3.5-1.5z" fill="#292524" opacity="0.6"/></svg>';
+  var pickIconDark = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:0.5">' +
+    '<rect x="4" y="4" width="10" height="10" rx="2" stroke="#fafaf9" stroke-width="1.3"/>' +
+    '<path d="M2 2l4.5 10.5 1.5-3.5 3.5-1.5z" fill="' + T.accent + '"/></svg>';
+  var pickIconActive = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">' +
+    '<rect x="4" y="4" width="10" height="10" rx="2" stroke="' + T.accent + '" stroke-width="1.3"/>' +
+    '<path d="M2 2l4.5 10.5 1.5-3.5 3.5-1.5z" fill="' + T.accent + '"/></svg>';
 
   function collapseBanner() {
     if (bannerCollapsed) return;
@@ -264,6 +268,9 @@ function _initOverlay() {
       (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>';
     banner.style.borderRadius = "50%";
     banner.style.padding = "8px";
+    // Re-clamp since dot is smaller
+    clampPosition();
+    applyPosition();
   }
 
   function expandBanner() {
@@ -272,31 +279,31 @@ function _initOverlay() {
     banner.style.borderRadius = "20px";
     banner.style.padding = "0";
     renderBanner();
+    // Re-clamp since pill is bigger
+    requestAnimationFrame(function () { clampPosition(); applyPosition(); });
   }
 
   function renderBanner() {
     if (bannerCollapsed) return;
 
-    var shortcut = isMac ? "Cmd Shift X" : "Ctrl Shift X";
-
     if (inspectMode) {
       banner.style.backgroundColor = "rgba(28, 25, 23, 0.9)";
       banner.style.border = "1px solid rgba(255, 255, 255, 0.1)";
       banner.innerHTML =
-        '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px">' +
+        '<div style="display:flex;align-items:center;gap:6px;padding:7px 12px">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:' + T.accent + ';flex-shrink:0;' +
         (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>' +
         '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:' + T.accent + '">pikr</span>' +
-        kbd(shortcut, true) +
+        pickIconActive +
         '</div>';
     } else {
       banner.style.backgroundColor = "rgba(255, 252, 249, 0.92)";
       banner.style.border = "1px solid rgba(0, 0, 0, 0.08)";
       banner.innerHTML =
-        '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px">' +
+        '<div style="display:flex;align-items:center;gap:6px;padding:7px 12px">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:#d6d3d1;flex-shrink:0"></div>' +
         '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:#292524">pikr</span>' +
-        kbd(shortcut, false) +
+        pickIconLight +
         '</div>';
     }
   }
@@ -504,7 +511,12 @@ function _initOverlay() {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "x") {
       e.preventDefault(); setInspectMode(!inspectMode); return;
     }
-    if (e.key === "Escape") { e.preventDefault(); animateExit(); }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      if (inspectMode) {
+        setInspectMode(false); // ESC exits inspect mode, not pikr
+      }
+    }
   }
 
   // --- Exit ---

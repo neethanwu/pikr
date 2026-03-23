@@ -108,12 +108,10 @@ program
         });
 
         // --- Ready message ---
-        const isMac = process.platform === "darwin";
-        const toggle = isMac ? "⌘+Shift+X" : "Ctrl+Shift+X";
         console.error(
           `\n  ${BRAND} ${DIM}ready${RESET}\n\n` +
-          `  ${DIM}toggle inspect${RESET}  ${toggle}\n` +
-          `  ${DIM}close${RESET}           ESC\n`
+          `  ${DIM}Click the pikr pill to toggle inspect mode.${RESET}\n` +
+          `  ${DIM}Close the browser window to exit.${RESET}\n`
         );
 
         // --- Listen ---
