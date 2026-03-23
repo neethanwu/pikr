@@ -60,7 +60,6 @@ pikr                       Auto-detect dev server
 pikr 3000                  Port shorthand
 pikr localhost:3000        URL without http://
 pikr http://localhost:3000 Full URL
-pikr --connect <endpoint>  Connect to debug port (Tauri)
 pikr --log <path>          Custom log file path
 pikr --no-clipboard        Log only, skip clipboard
 pikr --plugin <path>       Load a framework plugin
@@ -77,13 +76,6 @@ pikr --plugin ./my-plugin.js
 Plugins are also auto-discovered from `node_modules` (`pikr-plugin-*` or `@pikr/plugin-*`).
 
 **Coming soon:** built-in Vite and React source mapping.
-
-## Tauri support
-
-```bash
-WEBKIT_INSPECTOR_SERVER=0.0.0.0:9222 cargo tauri dev
-pikr --connect http://localhost:9222
-```
 
 ## Requirements
 
