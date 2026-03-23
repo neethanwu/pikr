@@ -7,3 +7,7 @@ dist/
 .pikr/
 docs/
 CONTEXT.md
+.claude/
+.collaborator/
+.DS_Store
+test-page.html
