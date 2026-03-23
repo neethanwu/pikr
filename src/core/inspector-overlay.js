@@ -117,117 +117,95 @@ function _initOverlay() {
   // --- Banner ---
   const banner = document.createElement("div");
   banner.id = "__pikr-toggle";
-  // #5 — banner position stored for drag
-  let bannerX = 0; // offset from center (0 = centered)
-  let bannerY = 0; // offset from bottom (0 = 20px from bottom)
+  // --- Banner positioning: absolute top/left for free drag ---
+  let posX = -1, posY = -1; // -1 = not yet positioned (use default)
   let isDragging = false;
-  let dragStartX = 0, dragStartY = 0, dragBannerX = 0, dragBannerY = 0;
+  let dragStartX = 0, dragStartY = 0, dragPosX = 0, dragPosY = 0;
+  var fullTransition = [
+    "opacity " + dur(250) + " ease",
+    "background-color " + dur(200) + " ease",
+    "border-color " + dur(200) + " ease",
+    "border-radius " + dur(200) + " ease",
+  ].join(", ");
 
   Object.assign(banner.style, {
-    position: "fixed", bottom: (20 + bannerY) + "px", left: "50%",
-    transform: "translateX(calc(-50% + " + bannerX + "px)) translateY(80px)",
-    zIndex: "2147483647", borderRadius: T.radius,
+    position: "fixed",
+    zIndex: "2147483647", borderRadius: "20px",
     fontFamily: T.font, fontSize: "13px",
     cursor: "grab", userSelect: "none",
     boxShadow: T.shadow,
-    // #3 — smooth transitions for all shape properties
-    transition: [
-      "transform " + dur(350) + " " + ease,
-      "opacity " + dur(250) + " ease",
-      "background-color " + dur(200) + " ease",
-      "width " + dur(250) + " " + ease,
-      "height " + dur(250) + " " + ease,
-      "border-radius " + dur(200) + " ease",
-      "padding " + dur(200) + " ease",
-    ].join(", "),
-    opacity: "0", overflow: "hidden",
+    transition: fullTransition,
+    opacity: "0",
     backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
   });
   document.documentElement.appendChild(banner);
 
-  function updateBannerPosition() {
-    if (isDragging) return;
-    banner.style.bottom = (20 + bannerY) + "px";
-    banner.style.transform = "translateX(calc(-50% + " + bannerX + "px)) translateY(0)";
+  function setDefaultPosition() {
+    var rect = banner.getBoundingClientRect();
+    posX = (window.innerWidth - rect.width) / 2;
+    posY = window.innerHeight - rect.height - 20;
+    applyPosition();
+  }
+
+  function applyPosition() {
+    banner.style.left = posX + "px";
+    banner.style.top = posY + "px";
+  }
+
+  function clampPosition() {
+    var rect = banner.getBoundingClientRect();
+    var vw = window.innerWidth, vh = window.innerHeight;
+    posX = Math.max(12, Math.min(vw - rect.width - 12, posX));
+    posY = Math.max(12, Math.min(vh - rect.height - 12, posY));
   }
 
   // Entrance
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      banner.style.transform = "translateX(calc(-50% + " + bannerX + "px)) translateY(0)";
+  requestAnimationFrame(function () {
+    renderBanner();
+    requestAnimationFrame(function () {
+      setDefaultPosition();
       banner.style.opacity = "1";
-      renderBanner();
     });
   });
 
-  // #5 — Drag handlers
+  // --- Drag ---
   function onBannerPointerDown(e) {
-    if (e.target.closest("kbd")) return; // don't drag from kbd
     isDragging = true;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-    dragBannerX = bannerX;
-    dragBannerY = bannerY;
+    dragStartX = e.clientX; dragStartY = e.clientY;
+    dragPosX = posX; dragPosY = posY;
     banner.style.cursor = "grabbing";
-    banner.style.transition = "background-color " + dur(200) + " ease"; // disable position transitions while dragging
     e.preventDefault();
     document.addEventListener("pointermove", onBannerPointerMove, true);
     document.addEventListener("pointerup", onBannerPointerUp, true);
   }
 
-  function clampBannerPosition() {
-    var vh = window.innerHeight;
-    var vw = window.innerWidth;
-    var rect = banner.getBoundingClientRect();
-    var maxX = (vw / 2) - rect.width / 2 - 12;
-    var minY = -vh + rect.height + 32; // can't drag above viewport
-    var maxY = -12; // can't drag below bottom edge (20px base + this)
-    bannerX = Math.max(-maxX, Math.min(maxX, bannerX));
-    bannerY = Math.max(minY, Math.min(maxY + 20, bannerY));
-  }
-
   function onBannerPointerMove(e) {
     if (!isDragging) return;
-    bannerX = dragBannerX + (e.clientX - dragStartX);
-    bannerY = dragBannerY - (e.clientY - dragStartY);
-    clampBannerPosition();
-    banner.style.bottom = (20 + bannerY) + "px";
-    banner.style.transform = "translateX(calc(-50% + " + bannerX + "px)) translateY(0)";
+    posX = dragPosX + (e.clientX - dragStartX);
+    posY = dragPosY + (e.clientY - dragStartY);
+    clampPosition();
+    applyPosition();
   }
 
   function onBannerPointerUp(e) {
     isDragging = false;
     banner.style.cursor = "grab";
-    banner.style.transition = [
-      "transform " + dur(350) + " " + ease,
-      "opacity " + dur(250) + " ease",
-      "background-color " + dur(200) + " ease",
-      "width " + dur(250) + " " + ease,
-      "height " + dur(250) + " " + ease,
-      "border-radius " + dur(200) + " ease",
-      "padding " + dur(200) + " ease",
-    ].join(", ");
 
-    // Clamp + snap to nearest edge if dragged far left/right
-    clampBannerPosition();
-    var vw = window.innerWidth;
+    // Snap to nearest horizontal edge if within 80px
+    clampPosition();
     var rect = banner.getBoundingClientRect();
-    var centerX = rect.left + rect.width / 2;
-    if (centerX < 100) {
-      bannerX = -(vw / 2) + rect.width / 2 + 20;
-    } else if (centerX > vw - 100) {
-      bannerX = (vw / 2) - rect.width / 2 - 20;
-    }
-    updateBannerPosition();
+    var vw = window.innerWidth;
+    if (rect.left < 80) posX = 12;
+    else if (rect.right > vw - 80) posX = vw - rect.width - 12;
+    applyPosition();
 
     document.removeEventListener("pointermove", onBannerPointerMove, true);
     document.removeEventListener("pointerup", onBannerPointerUp, true);
 
-    // Suppress the click that follows pointerup if we actually dragged
-    const dx = Math.abs(e.clientX - dragStartX);
-    const dy = Math.abs(e.clientY - dragStartY);
+    // Suppress click if we actually dragged
+    var dx = Math.abs(e.clientX - dragStartX), dy = Math.abs(e.clientY - dragStartY);
     if (dx > 4 || dy > 4) {
-      const suppress = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+      var suppress = function (ev) { ev.stopPropagation(); ev.preventDefault(); };
       banner.addEventListener("click", suppress, { once: true, capture: true });
     }
   }
@@ -269,92 +247,56 @@ function _initOverlay() {
     }, 1400);
   }
 
-  // --- Banner rendering ---
-  // #6 — clean hotkey rendering: separate modifier and key into distinct badges
-  function kbd(keys, dark) {
-    const bg = dark ? "rgba(250,250,249,0.1)" : "rgba(28,25,23,0.06)";
-    const border = dark ? "rgba(250,250,249,0.12)" : "rgba(28,25,23,0.1)";
-    const color = dark ? "rgba(250,250,249,0.55)" : "rgba(41,37,36,0.5)";
-    const s = "font-family:" + T.mono + ";font-size:11px;padding:1px 5px;border-radius:3px;" +
-      "line-height:1.4;display:inline-block;background:" + bg + ";border:1px solid " + border + ";color:" + color;
-    return keys.map(function (k) { return '<kbd style="' + s + '">' + k + '</kbd>'; }).join('<span style="opacity:0.3;margin:0 1px">+</span>');
+  // --- Banner rendering (compact pill) ---
+  function kbd(text, dark) {
+    var bg = dark ? "rgba(250,250,249,0.1)" : "rgba(28,25,23,0.06)";
+    var border = dark ? "rgba(250,250,249,0.1)" : "rgba(28,25,23,0.08)";
+    var color = dark ? "rgba(250,250,249,0.5)" : "rgba(41,37,36,0.45)";
+    return '<kbd style="font-family:' + T.mono + ';font-size:10px;padding:2px 5px;border-radius:3px;' +
+      'line-height:1.3;display:inline-block;letter-spacing:0.02em;' +
+      'background:' + bg + ';border:1px solid ' + border + ';color:' + color + '">' + text + '</kbd>';
   }
-  function sep() { return '<span style="opacity:0.2;margin:0 4px">\u00b7</span>'; }
 
-  // #3 — smooth collapse: fade content, THEN resize shape
   function collapseBanner() {
     if (bannerCollapsed) return;
     bannerCollapsed = true;
-    // First: fade out the inner content
-    const inner = banner.firstElementChild;
-    if (inner) inner.style.opacity = "0";
-    // Then: after fade, swap to dot and resize
-    setTimeout(function () {
-      banner.innerHTML = '<div style="width:10px;height:10px;border-radius:50%;background:' + T.accent + ';' +
-        (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>';
-      banner.style.borderRadius = "50%";
-      banner.style.padding = "8px";
-    }, reducedMotion ? 0 : 120);
+    banner.innerHTML = '<div style="width:10px;height:10px;border-radius:50%;background:' + T.accent + ';' +
+      (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>';
+    banner.style.borderRadius = "50%";
+    banner.style.padding = "8px";
   }
 
-  // #3 — smooth expand: resize shape first, THEN fade in content
   function expandBanner() {
     if (!bannerCollapsed) return;
     bannerCollapsed = false;
-    banner.style.borderRadius = T.radius;
+    banner.style.borderRadius = "20px";
     banner.style.padding = "0";
-    // After shape transition, render content and fade in
-    setTimeout(function () {
-      renderBanner();
-      const inner = banner.firstElementChild;
-      if (inner) {
-        inner.style.opacity = "0";
-        inner.style.transition = "opacity " + dur(150) + " ease";
-        requestAnimationFrame(function () { if (inner) inner.style.opacity = "1"; });
-      }
-    }, reducedMotion ? 0 : 150);
+    renderBanner();
   }
 
   function renderBanner() {
     if (bannerCollapsed) return;
 
-    // Wordmark: system sans-serif bold (not mono) — more recognizable
-    var wm = '<span style="font-size:14px;font-weight:700;letter-spacing:-0.03em;';
-    // Hotkeys: text labels, not Unicode symbols (⇧⌘ render poorly in mono fonts)
-    var toggleKeys = isMac ? ["Cmd", "Shift", "X"] : ["Ctrl", "Shift", "X"];
+    var shortcut = isMac ? "Cmd Shift X" : "Ctrl Shift X";
 
     if (inspectMode) {
       banner.style.backgroundColor = "rgba(28, 25, 23, 0.9)";
       banner.style.border = "1px solid rgba(255, 255, 255, 0.1)";
       banner.innerHTML =
-        '<div style="display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:13px;color:rgba(168,162,158,0.5)">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:' + T.accent + ';flex-shrink:0;' +
         (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>' +
-        wm + 'color:' + T.accent + '">pikr</span>' +
-        sep() +
-        '<span style="color:rgba(250,250,249,0.65)">Click to pick</span>' +
-        sep() +
-        kbd(toggleKeys, true) +
-        '<span style="font-size:12px;margin-left:3px;color:rgba(250,250,249,0.35)">browse</span>' +
-        sep() +
-        kbd(["Esc"], true) +
-        '<span style="font-size:12px;margin-left:3px;color:rgba(250,250,249,0.35)">close</span>' +
+        '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:' + T.accent + '">pikr</span>' +
+        kbd(shortcut, true) +
         '</div>';
     } else {
       banner.style.backgroundColor = "rgba(255, 252, 249, 0.92)";
       banner.style.border = "1px solid rgba(0, 0, 0, 0.08)";
       banner.innerHTML =
-        '<div style="display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:13px;color:rgba(120,113,108,0.5)">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:#d6d3d1;flex-shrink:0"></div>' +
-        wm + 'color:#292524">pikr</span>' +
-        sep() +
-        '<span style="color:rgba(41,37,36,0.4)">Browse mode</span>' +
-        sep() +
-        kbd(toggleKeys, false) +
-        '<span style="font-size:12px;margin-left:3px;color:rgba(41,37,36,0.3)">inspect</span>' +
-        sep() +
-        kbd(["Esc"], false) +
-        '<span style="font-size:12px;margin-left:3px;color:rgba(41,37,36,0.3)">close</span>' +
+        '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:#292524">pikr</span>' +
+        kbd(shortcut, false) +
         '</div>';
     }
   }
@@ -568,7 +510,6 @@ function _initOverlay() {
   // --- Exit ---
   function animateExit() {
     document.documentElement.style.cursor = "";
-    banner.style.transform = "translateX(calc(-50% + " + bannerX + "px)) translateY(80px)";
     banner.style.opacity = "0";
     highlight.style.opacity = "0"; highlightVisible = false;
     label.style.opacity = "0"; toast.style.opacity = "0";

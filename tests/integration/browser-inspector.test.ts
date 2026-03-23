@@ -121,7 +121,7 @@ describe("injectOverlay", () => {
     const btnText = await session.page.evaluate(() => {
       return document.getElementById("__pikr-toggle")?.textContent;
     });
-    expect(btnText).toContain("Browse mode");
+    expect(btnText).toContain("pikr");
   });
 });
 
@@ -202,7 +202,7 @@ describe("full pipeline: overlay → click → selection", () => {
     const btnText = await session.page.evaluate(() => {
       return document.getElementById("__pikr-toggle")?.textContent;
     });
-    expect(btnText).toContain("Click to pick");
+    expect(btnText).toContain("pikr");
 
     // Click the test button
     await session.page.click("#test-btn");
