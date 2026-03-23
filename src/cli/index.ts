@@ -35,12 +35,12 @@ function log(msg: string) {
 
 program
   .name("pikr")
-  .description("Universal element picker for terminal-based AI coding agents")
+  .description("Visual element picker for terminal AI agents")
   .version(version);
 
 program
-  .argument("[url]", "URL to open (e.g., http://localhost:3000)")
-  .option("--connect <endpoint>", "Connect to an existing debug port (Tauri/remote)")
+  .argument("[url]", "Port, URL, or auto-detect (e.g., 3000, localhost:3000)")
+  .option("--connect <endpoint>", "Connect to an existing debug port")
   .option("--plugin <path...>", "Load framework plugin(s)")
   .option("--log <path>", "Custom log file path")
   .option("--no-clipboard", "Disable clipboard output")
@@ -202,7 +202,7 @@ program
 
 program
   .command("install-skill")
-  .description("Install the pikr Claude Code skill")
+  .description("Install the pikr agent skill")
   .option("--local", "Install to project .claude/skills/ instead of global")
   .action(async (opts: { local?: boolean }) => {
     try {
