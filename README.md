@@ -66,7 +66,7 @@ For deeper integration, agents can:
 2. Read selections from `~/.pikr/selections.jsonl` (NDJSON, one entry per line)
 3. Each entry includes `selector`, `html`, `styles`, `ancestry`, and `sessionId`
 
-**Coming soon:** a Claude Code skill that lets the agent launch pikr and read selections automatically.
+**Coming soon:** agent skills that let your AI agent launch pikr and read selections automatically.
 
 ## Options
 
