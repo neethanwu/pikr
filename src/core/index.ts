@@ -13,7 +13,7 @@ export type { OutputOptions } from "./output.js";
 export { installSkill } from "./install-skill.js";
 export type { InstallSkillOptions } from "./install-skill.js";
 
-export { detectDevServer } from "./detect.js";
+export { detectDevServer, detectDevServers } from "./detect.js";
 
 export { PluginManager } from "./plugins.js";
 export type { PikrPlugin, PluginEnrichment } from "./plugins.js";

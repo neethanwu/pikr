@@ -10,7 +10,7 @@ import {
   toSelection,
   writeSelection,
   defaultLogPath,
-  detectDevServer,
+  detectDevServers,
   PluginManager,
   installSkill,
   PikrError,
@@ -76,17 +76,27 @@ program
           }
 
           if (!targetUrl) {
-            log("scanning for dev server...");
-            const detected = await detectDevServer();
-            if (detected) {
-              targetUrl = detected;
-              log(`found ${detected}`);
-            } else {
+            log("scanning for dev servers...");
+            const servers = await detectDevServers();
+
+            if (servers.length === 0) {
               console.error(`\n  ${BRAND} ${DIM}no dev server found${RESET}\n`);
               console.error(`  ${DIM}Usage:${RESET}  pikr              ${DIM}auto-detect${RESET}`);
               console.error(`          pikr 3000          ${DIM}port shorthand${RESET}`);
               console.error(`          pikr localhost:3000 ${DIM}full URL${RESET}\n`);
               process.exit(1);
+              return;
+            } else if (servers.length === 1) {
+              targetUrl = servers[0].url;
+              log(`found ${targetUrl}`);
+            } else {
+              // Multiple servers — let user pick
+              console.error(`\n  ${BRAND} ${DIM}found ${servers.length} servers${RESET}\n`);
+              servers.forEach((s, i) => {
+                console.error(`  ${DIM}${i + 1}.${RESET} localhost:${s.port}`);
+              });
+              console.error(`\n  ${DIM}Run with a port:${RESET} pikr ${servers[0].port}\n`);
+              process.exit(0);
               return;
             }
           }
