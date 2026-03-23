@@ -325,6 +325,7 @@ function _initOverlay() {
 
     if (inspectMode) {
       banner.style.backgroundColor = "rgba(28, 25, 23, 0.9)";
+      banner.style.border = "1px solid rgba(255, 255, 255, 0.1)";
       banner.innerHTML =
         '<div style="display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:13px;color:rgba(168,162,158,0.5)">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:' + T.accent + ';flex-shrink:0;' +
@@ -341,6 +342,7 @@ function _initOverlay() {
         '</div>';
     } else {
       banner.style.backgroundColor = "rgba(255, 252, 249, 0.92)";
+      banner.style.border = "1px solid rgba(0, 0, 0, 0.08)";
       banner.innerHTML =
         '<div style="display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:13px;color:rgba(120,113,108,0.5)">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:#d6d3d1;flex-shrink:0"></div>' +
