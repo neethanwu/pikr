@@ -43,7 +43,6 @@ function _initOverlay() {
   let inspectMode = false;
   let hoveredElement = null;
   let captureCount = 0;
-  let bannerCollapsed = false;
   let collapseTimer = null;
 
   // --- Keyframes ---
@@ -163,7 +162,7 @@ function _initOverlay() {
     var w = banner.offsetWidth || 26;
     var h = banner.offsetHeight || 26;
     var vw = window.innerWidth, vh = window.innerHeight;
-    var m = bannerCollapsed ? 4 : 8;
+    var m = 8;
     posX = Math.max(m, Math.min(vw - w - m, posX));
     posY = Math.max(m, Math.min(vh - h - m, posY));
   }
@@ -176,7 +175,7 @@ function _initOverlay() {
     var w = banner.offsetWidth || 26;
     var h = banner.offsetHeight || 26;
     var vw = window.innerWidth, vh = window.innerHeight;
-    var m = bannerCollapsed ? 4 : 8;
+    var m = 8;
     var cx = posX + w / 2, cy = posY + h / 2;
     var distL = cx, distR = vw - cx;
     var distT = cy, distB = vh - cy;
@@ -188,21 +187,7 @@ function _initOverlay() {
     applyPosition(animate);
   }
 
-  // Re-snap to the SAME edge after size change (collapse/expand).
-  // No animation — position tracks size change silently.
-  function resnapToCurrentEdge() {
-    var w = banner.offsetWidth || 26;
-    var h = banner.offsetHeight || 26;
-    var vw = window.innerWidth, vh = window.innerHeight;
-    var m = bannerCollapsed ? 4 : 8;
-    if (snappedEdge === "left") posX = m;
-    else if (snappedEdge === "right") posX = vw - w - m;
-    else if (snappedEdge === "top") posY = m;
-    else posY = vh - h - m;
-    posX = Math.max(m, Math.min(vw - w - m, posX));
-    posY = Math.max(m, Math.min(vh - h - m, posY));
-    applyPosition(false); // instant, no transition
-  }
+
 
   // Entrance
   requestAnimationFrame(function () {
@@ -296,42 +281,7 @@ function _initOverlay() {
       '<path d="M21 11V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/></svg>';
   }
 
-  function collapseBanner() {
-    if (bannerCollapsed) return;
-    bannerCollapsed = true;
-    banner.innerHTML = '<div style="width:10px;height:10px;border-radius:50%;background:' + T.accent + ';' +
-      (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>';
-    banner.style.borderRadius = "50%";
-    banner.style.padding = "8px";
-    // Track position continuously during CSS size transition
-    trackResize();
-  }
-
-  function expandBanner() {
-    if (!bannerCollapsed) return;
-    bannerCollapsed = false;
-    banner.style.borderRadius = "20px";
-    banner.style.padding = "0";
-    renderBanner();
-    trackResize();
-  }
-
-  // Continuously resnap during CSS size transition so position tracks smoothly
-  var resizeTrackId = 0;
-  function trackResize() {
-    var id = ++resizeTrackId;
-    var frames = 0;
-    function tick() {
-      if (id !== resizeTrackId || frames > 20) return; // stop if superseded or done
-      resnapToCurrentEdge();
-      frames++;
-      requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  }
-
   function renderBanner() {
-    if (bannerCollapsed) return;
 
     // Shared inner layout: flex center, consistent gap and padding
     var inner = 'display:flex;align-items:center;justify-content:center;gap:7px;padding:7px 12px;line-height:1';
@@ -361,7 +311,7 @@ function _initOverlay() {
   // --- Mode toggle ---
   function setInspectMode(enabled) {
     inspectMode = enabled;
-    if (!bannerCollapsed) renderBanner();
+    renderBanner();
     if (enabled) {
       document.documentElement.style.cursor = "crosshair";
     } else {
@@ -371,7 +321,6 @@ function _initOverlay() {
       label.style.opacity = "0";
       label.style.transform = "translateY(4px)";
       hoveredElement = null;
-      expandBanner();
     }
   }
 
@@ -518,13 +467,11 @@ function _initOverlay() {
         highlight.style.opacity = "0";
         label.style.opacity = "0";
         label.style.transform = "translateY(4px)";
-        expandBanner();
       }
       hoveredElement = null;
       return;
     }
 
-    collapseBanner();
     hoveredElement = el;
     var rect = el.getBoundingClientRect();
     var w = Math.round(rect.width);
