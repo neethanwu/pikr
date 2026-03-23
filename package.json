@@ -23,6 +23,10 @@
     "chrome-devtools-protocol"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neethanwu/pikr"
+  },
   "engines": {
     "node": ">=18"
   },
