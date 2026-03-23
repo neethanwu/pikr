@@ -147,18 +147,42 @@ function _initOverlay() {
     applyPosition();
   }
 
-  function applyPosition() {
+  function applyPosition(animate) {
+    if (animate && !reducedMotion) {
+      banner.style.transition = fullTransition + ", left 0.25s " + ease + ", top 0.25s " + ease;
+    }
     banner.style.left = posX + "px";
     banner.style.top = posY + "px";
+    if (animate && !reducedMotion) {
+      // Remove position transition after it completes
+      setTimeout(function () { banner.style.transition = fullTransition; }, 280);
+    }
   }
 
   function clampPosition() {
-    var rect = banner.getBoundingClientRect();
+    var w = banner.offsetWidth || 26;
+    var h = banner.offsetHeight || 26;
     var vw = window.innerWidth, vh = window.innerHeight;
-    // Collapsed dot can go closer to edge (4px), expanded pill needs margin (12px)
-    var margin = bannerCollapsed ? 4 : 12;
-    posX = Math.max(margin, Math.min(vw - rect.width - margin, posX));
-    posY = Math.max(margin, Math.min(vh - rect.height - margin, posY));
+    var m = bannerCollapsed ? 4 : 8;
+    posX = Math.max(m, Math.min(vw - w - m, posX));
+    posY = Math.max(m, Math.min(vh - h - m, posY));
+  }
+
+  // Always snap to nearest edge
+  function snapToEdge(animate) {
+    var w = banner.offsetWidth || 26;
+    var h = banner.offsetHeight || 26;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var m = bannerCollapsed ? 4 : 8;
+    var cx = posX + w / 2, cy = posY + h / 2;
+    var distL = cx, distR = vw - cx;
+    var distT = cy, distB = vh - cy;
+    var min = Math.min(distL, distR, distT, distB);
+    if (min === distL) posX = m;
+    else if (min === distR) posX = vw - w - m;
+    else if (min === distT) posY = m;
+    else posY = vh - h - m;
+    applyPosition(animate);
   }
 
   // Entrance
@@ -176,6 +200,7 @@ function _initOverlay() {
     dragStartX = e.clientX; dragStartY = e.clientY;
     dragPosX = posX; dragPosY = posY;
     banner.style.cursor = "grabbing";
+    banner.style.transition = fullTransition; // no position transition while dragging
     e.preventDefault();
     document.addEventListener("pointermove", onBannerPointerMove, true);
     document.addEventListener("pointerup", onBannerPointerUp, true);
@@ -186,28 +211,16 @@ function _initOverlay() {
     posX = dragPosX + (e.clientX - dragStartX);
     posY = dragPosY + (e.clientY - dragStartY);
     clampPosition();
-    applyPosition();
+    applyPosition(false);
   }
 
   function onBannerPointerUp(e) {
     isDragging = false;
     banner.style.cursor = "grab";
 
-    // Snap to nearest edge (all 4 sides)
+    // Always snap to nearest edge with animation
     clampPosition();
-    var rect = banner.getBoundingClientRect();
-    var vw = window.innerWidth, vh = window.innerHeight;
-    var m = bannerCollapsed ? 4 : 12;
-    var distL = rect.left, distR = vw - rect.right;
-    var distT = rect.top, distB = vh - rect.bottom;
-    var minDist = Math.min(distL, distR, distT, distB);
-    if (minDist < 80) {
-      if (minDist === distL) posX = m;
-      else if (minDist === distR) posX = vw - rect.width - m;
-      else if (minDist === distT) posY = m;
-      else posY = vh - rect.height - m;
-    }
-    applyPosition();
+    snapToEdge(true);
 
     document.removeEventListener("pointermove", onBannerPointerMove, true);
     document.removeEventListener("pointerup", onBannerPointerUp, true);
@@ -257,12 +270,11 @@ function _initOverlay() {
     }, 1400);
   }
 
-  // --- Banner rendering (compact pill with pick icon) ---
-  // Clean cursor arrow icon — simple, recognizable
-  function pickIcon(color, opacity) {
-    return '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;opacity:' + (opacity || 1) + '">' +
-      '<path d="M1.5 1l4 11 1.5-4 4-1.5z" fill="' + color + '"/>' +
-      '<path d="M7.5 8.5L11 12" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  // --- Banner rendering (compact pill with Lucide square-mouse-pointer icon) ---
+  function pickIcon(color) {
+    return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;display:block">' +
+      '<path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/>' +
+      '<path d="M21 11V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/></svg>';
   }
 
   function collapseBanner() {
@@ -272,9 +284,8 @@ function _initOverlay() {
       (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>';
     banner.style.borderRadius = "50%";
     banner.style.padding = "8px";
-    // Re-clamp since dot is smaller
-    clampPosition();
-    applyPosition();
+    // Re-snap to edge since dot is smaller
+    requestAnimationFrame(function () { snapToEdge(true); });
   }
 
   function expandBanner() {
@@ -283,31 +294,34 @@ function _initOverlay() {
     banner.style.borderRadius = "20px";
     banner.style.padding = "0";
     renderBanner();
-    // Re-clamp since pill is bigger
-    requestAnimationFrame(function () { clampPosition(); applyPosition(); });
+    // Re-snap since pill is bigger
+    requestAnimationFrame(function () { snapToEdge(true); });
   }
 
   function renderBanner() {
     if (bannerCollapsed) return;
 
+    // Shared inner layout: flex center, consistent gap and padding
+    var inner = 'display:flex;align-items:center;justify-content:center;gap:7px;padding:7px 12px;line-height:1';
+
     if (inspectMode) {
       banner.style.backgroundColor = "rgba(28, 25, 23, 0.9)";
       banner.style.border = "1px solid rgba(255, 255, 255, 0.1)";
       banner.innerHTML =
-        '<div style="display:flex;align-items:center;gap:6px;padding:7px 12px">' +
+        '<div style="' + inner + '">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:' + T.accent + ';flex-shrink:0;' +
         (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>' +
         '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:rgba(250,250,249,0.85)">pikr</span>' +
-        pickIcon("rgba(250,250,249,0.4)") +
+        pickIcon("rgba(250,250,249,0.35)") +
         '</div>';
     } else {
       banner.style.backgroundColor = "rgba(255, 252, 249, 0.92)";
       banner.style.border = "1px solid rgba(0, 0, 0, 0.08)";
       banner.innerHTML =
-        '<div style="display:flex;align-items:center;gap:6px;padding:7px 12px">' +
+        '<div style="' + inner + '">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:#d6d3d1;flex-shrink:0"></div>' +
         '<span style="font-size:13px;font-weight:700;letter-spacing:-0.03em;color:#292524">pikr</span>' +
-        pickIcon("rgba(41,37,36,0.3)") +
+        pickIcon("rgba(41,37,36,0.25)") +
         '</div>';
     }
   }
