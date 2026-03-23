@@ -1,19 +1,20 @@
-import type { CDPSession } from "puppeteer-core";
-import type { PikrPlugin, PluginEnrichment } from "../plugins.js";
-import type { SelectionEvent } from "../inspector.js";
+import { BasePlugin } from "./base.js";
 
 /**
  * Built-in React source mapping plugin.
  *
- * Detects React (any bundler) and maps clicked elements to source files.
- *
  * Strategy (cascading, first match wins):
  *   1. data-inspector-* attributes (requires @react-dev-inspector/babel-plugin)
- *   2. __reactFiber$*._debugSource (React 18, built-in to dev JSX transform)
+ *   2. __reactFiber$*._debugSource (React 18)
  *   3. __reactFiber$*._debugStack parsing (React 19+, best-effort)
  */
+class ReactPlugin extends BasePlugin {
+  name = "react";
 
-const ENRICH_SCRIPT = `
+  protected detectExpression =
+    "typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined'";
+
+  protected enrichScript = `
 (function(selector) {
   var el = document.querySelector(selector);
   if (!el) return null;
@@ -21,7 +22,7 @@ const ENRICH_SCRIPT = `
   var cur = el;
   while (cur && cur !== document.body) {
 
-    // 1. React dev inspector attributes (most reliable, any React version)
+    // 1. React dev inspector attributes
     if (cur.dataset && cur.dataset.inspectorRelativePath) {
       return {
         componentName: null,
@@ -31,14 +32,14 @@ const ENRICH_SCRIPT = `
       };
     }
 
-    // 2 & 3. Find fiber via __reactFiber$* or __reactInternalInstance$*
+    // 2 & 3. React fiber
     var keys = Object.keys(cur);
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       if (k.indexOf('__reactFiber$') === 0 || k.indexOf('__reactInternalInstance$') === 0) {
         var fiber = cur[k];
         while (fiber) {
-          // React 18: _debugSource (structured object)
+          // React 18: _debugSource
           if (fiber._debugSource) {
             var src = fiber._debugSource;
             var fname = (fiber.type && (fiber.type.displayName || fiber.type.name)) || null;
@@ -49,7 +50,7 @@ const ENRICH_SCRIPT = `
               col: src.columnNumber || null,
             };
           }
-          // React 19+: _debugStack (Error object, parse V8 stack trace)
+          // React 19+: _debugStack
           if (fiber._debugStack && typeof fiber._debugStack === 'object') {
             var stack = fiber._debugStack.stack || String(fiber._debugStack);
             var m = stack.match(/at\\s+(\\w+)\\s+\\(https?:\\/\\/[^/]+\\/(src\\/[^?:]+)[^:]*:(\\d+):(\\d+)\\)/);
@@ -76,51 +77,7 @@ const ENRICH_SCRIPT = `
     cur = cur.parentElement;
   }
   return null;
-})
-`;
-
-function escapeSelector(selector: string): string {
-  return selector.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-}
-
-class ReactPlugin implements PikrPlugin {
-  name = "react";
-
-  async detect(cdp: CDPSession): Promise<boolean> {
-    try {
-      const result = await cdp.send("Runtime.evaluate", {
-        expression: "typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined'",
-        returnByValue: true,
-      });
-      return result.result.value === true;
-    } catch {
-      return false;
-    }
-  }
-
-  async enrich(
-    cdp: CDPSession,
-    selection: SelectionEvent
-  ): Promise<PluginEnrichment | null> {
-    try {
-      const result = await cdp.send("Runtime.evaluate", {
-        expression: `${ENRICH_SCRIPT}('${escapeSelector(selection.selector)}')`,
-        returnByValue: true,
-      });
-
-      const value = result.result.value as PluginEnrichment | null;
-      if (!value || !value.filePath) return null;
-
-      return {
-        componentName: value.componentName ?? undefined,
-        filePath: value.filePath,
-        line: value.line ?? undefined,
-        col: value.col ?? undefined,
-      };
-    } catch {
-      return null;
-    }
-  }
+})`;
 }
 
 export const reactPlugin = new ReactPlugin();
