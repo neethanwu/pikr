@@ -175,10 +175,22 @@ function _initOverlay() {
     document.addEventListener("pointerup", onBannerPointerUp, true);
   }
 
+  function clampBannerPosition() {
+    var vh = window.innerHeight;
+    var vw = window.innerWidth;
+    var rect = banner.getBoundingClientRect();
+    var maxX = (vw / 2) - rect.width / 2 - 12;
+    var minY = -vh + rect.height + 32; // can't drag above viewport
+    var maxY = -12; // can't drag below bottom edge (20px base + this)
+    bannerX = Math.max(-maxX, Math.min(maxX, bannerX));
+    bannerY = Math.max(minY, Math.min(maxY + 20, bannerY));
+  }
+
   function onBannerPointerMove(e) {
     if (!isDragging) return;
     bannerX = dragBannerX + (e.clientX - dragStartX);
-    bannerY = dragBannerY - (e.clientY - dragStartY); // inverted because bottom-based
+    bannerY = dragBannerY - (e.clientY - dragStartY);
+    clampBannerPosition();
     banner.style.bottom = (20 + bannerY) + "px";
     banner.style.transform = "translateX(calc(-50% + " + bannerX + "px)) translateY(0)";
   }
@@ -186,7 +198,6 @@ function _initOverlay() {
   function onBannerPointerUp(e) {
     isDragging = false;
     banner.style.cursor = "grab";
-    // Restore full transitions
     banner.style.transition = [
       "transform " + dur(350) + " " + ease,
       "opacity " + dur(250) + " ease",
@@ -197,14 +208,15 @@ function _initOverlay() {
       "padding " + dur(200) + " ease",
     ].join(", ");
 
-    // Snap to nearest edge if dragged far
-    const vw = window.innerWidth;
-    const bannerRect = banner.getBoundingClientRect();
-    const centerX = bannerRect.left + bannerRect.width / 2;
+    // Clamp + snap to nearest edge if dragged far left/right
+    clampBannerPosition();
+    var vw = window.innerWidth;
+    var rect = banner.getBoundingClientRect();
+    var centerX = rect.left + rect.width / 2;
     if (centerX < 100) {
-      bannerX = -(vw / 2) + bannerRect.width / 2 + 20;
+      bannerX = -(vw / 2) + rect.width / 2 + 20;
     } else if (centerX > vw - 100) {
-      bannerX = (vw / 2) - bannerRect.width / 2 - 20;
+      bannerX = (vw / 2) - rect.width / 2 - 20;
     }
     updateBannerPosition();
 
@@ -306,20 +318,25 @@ function _initOverlay() {
   function renderBanner() {
     if (bannerCollapsed) return;
 
+    // Wordmark: system sans-serif bold (not mono) — more recognizable
+    var wm = '<span style="font-size:14px;font-weight:700;letter-spacing:-0.03em;';
+    // Hotkeys: text labels, not Unicode symbols (⇧⌘ render poorly in mono fonts)
+    var toggleKeys = isMac ? ["Cmd", "Shift", "X"] : ["Ctrl", "Shift", "X"];
+
     if (inspectMode) {
       banner.style.backgroundColor = "rgba(28, 25, 23, 0.9)";
       banner.innerHTML =
         '<div style="display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:13px;color:rgba(168,162,158,0.5)">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:' + T.accent + ';flex-shrink:0;' +
         (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>' +
-        '<span style="font-family:' + T.mono + ';font-size:14px;font-weight:700;letter-spacing:-0.02em;color:' + T.accent + '">pikr</span>' +
+        wm + 'color:' + T.accent + '">pikr</span>' +
         sep() +
         '<span style="color:rgba(250,250,249,0.65)">Click to pick</span>' +
         sep() +
-        kbd(isMac ? ["\u2318", "\u21e7", "X"] : ["Ctrl", "Shift", "X"], true) +
+        kbd(toggleKeys, true) +
         '<span style="font-size:12px;margin-left:3px;color:rgba(250,250,249,0.35)">browse</span>' +
         sep() +
-        kbd(["esc"], true) +
+        kbd(["Esc"], true) +
         '<span style="font-size:12px;margin-left:3px;color:rgba(250,250,249,0.35)">close</span>' +
         '</div>';
     } else {
@@ -327,14 +344,14 @@ function _initOverlay() {
       banner.innerHTML =
         '<div style="display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:13px;color:rgba(120,113,108,0.5)">' +
         '<div style="width:8px;height:8px;border-radius:50%;background:#d6d3d1;flex-shrink:0"></div>' +
-        '<span style="font-family:' + T.mono + ';font-size:14px;font-weight:700;letter-spacing:-0.02em;color:#292524">pikr</span>' +
+        wm + 'color:#292524">pikr</span>' +
         sep() +
         '<span style="color:rgba(41,37,36,0.4)">Browse mode</span>' +
         sep() +
-        kbd(isMac ? ["\u2318", "\u21e7", "X"] : ["Ctrl", "Shift", "X"], false) +
+        kbd(toggleKeys, false) +
         '<span style="font-size:12px;margin-left:3px;color:rgba(41,37,36,0.3)">inspect</span>' +
         sep() +
-        kbd(["esc"], false) +
+        kbd(["Esc"], false) +
         '<span style="font-size:12px;margin-left:3px;color:rgba(41,37,36,0.3)">close</span>' +
         '</div>';
     }
