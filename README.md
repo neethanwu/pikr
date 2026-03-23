@@ -1,8 +1,8 @@
 # pikr
 
-Universal element picker for terminal-based AI coding agents.
+Visual element picker for terminal AI agents. Click → clipboard → paste.
 
-Point at a UI element in your running app. Structured context goes to clipboard. Paste into any terminal agent.
+Point at any UI element in your running app. Structured context goes to clipboard. Paste into any terminal agent.
 
 ## Quickstart
 
@@ -39,6 +39,35 @@ styles: background-color: #2563eb; color: #fff; border-radius: 8px
 
 Every capture is also logged to `~/.pikr/selections.jsonl`.
 
+## Install
+
+For one-off use:
+
+```bash
+npx pikr 3000
+```
+
+For regular use or agent access:
+
+```bash
+npm install -g pikr
+pikr 3000
+```
+
+Global install lets AI agents launch pikr directly and read selections from the log file at `~/.pikr/selections.jsonl`.
+
+## Agent integration
+
+pikr works with any terminal agent out of the box — just paste the clipboard output.
+
+For deeper integration, agents can:
+
+1. Launch pikr as a background process: `pikr 3000 &`
+2. Read selections from `~/.pikr/selections.jsonl` (NDJSON, one entry per line)
+3. Each entry includes `selector`, `html`, `styles`, `ancestry`, and `sessionId`
+
+**Coming soon:** a Claude Code skill that lets the agent launch pikr and read selections automatically.
+
 ## Options
 
 ```
@@ -49,7 +78,20 @@ pikr http://localhost:3000 Full URL
 pikr --connect <endpoint>  Connect to debug port (Tauri)
 pikr --log <path>          Custom log file path
 pikr --no-clipboard        Log only, skip clipboard
+pikr --plugin <path>       Load a framework plugin
 ```
+
+## Plugins
+
+pikr captures raw DOM data by default. Framework plugins can enrich selections with component names and source file paths.
+
+```bash
+pikr --plugin ./my-plugin.js
+```
+
+Plugins are also auto-discovered from `node_modules` (`pikr-plugin-*` or `@pikr/plugin-*`).
+
+**Coming soon:** built-in Vite and React source mapping.
 
 ## Tauri support
 
