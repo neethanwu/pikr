@@ -141,8 +141,10 @@ function _initOverlay() {
 
   function setDefaultPosition() {
     var rect = banner.getBoundingClientRect();
+    // Center horizontally, then snap to bottom edge (same margin as snapToEdge)
     posX = (window.innerWidth - rect.width) / 2;
-    posY = window.innerHeight - rect.height - 20;
+    posY = window.innerHeight - rect.height - 8;
+    snappedEdge = "bottom";
     applyPosition();
   }
 
