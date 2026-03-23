@@ -1,5 +1,5 @@
 {
-  "name": "pikr",
+  "name": "@neethan/pikr",
   "version": "0.1.0",
   "description": "Universal element picker for terminal-based AI coding agents",
   "type": "module",

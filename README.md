@@ -7,15 +7,15 @@ A CLI tool that lets you visually pick UI elements and get structured context fo
 Try it without installing:
 
 ```bash
-npx pikr <port>        # e.g. npx pikr 3000
+npx @neethan/pikr <port>    # e.g. npx @neethan/pikr 3000
 ```
 
 Or install globally — this also lets AI agents launch pikr and read selections directly:
 
 ```bash
-npm install -g pikr
-pikr                   # auto-detect running dev server
-pikr <port>            # e.g. pikr 3000, pikr 5173
+npm install -g @neethan/pikr
+pikr                        # auto-detect running dev server
+pikr <port>                 # e.g. pikr 3000, pikr 5173
 ```
 
 ## How it works
