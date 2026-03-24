@@ -1,4 +1,4 @@
-const COMMON_PORTS = [3000, 5173, 5174, 8080, 4321, 3001, 4200, 8000, 8888, 4000, 9000];
+const COMMON_PORTS = [3000, 5173, 5174, 8080, 4321, 3001, 4200, 8000, 8888, 4000, 9000, 1420];
 
 interface DetectedServer {
   url: string;

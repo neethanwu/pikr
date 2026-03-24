@@ -84,8 +84,8 @@ program
             if (servers.length === 0) {
               console.error(`\n  ${BRAND} ${DIM}no dev server found${RESET}\n`);
               console.error(`  ${DIM}Usage:${RESET}  pikr              ${DIM}auto-detect${RESET}`);
-              console.error(`          pikr 3000          ${DIM}port shorthand${RESET}`);
-              console.error(`          pikr localhost:3000 ${DIM}full URL${RESET}\n`);
+              console.error(`          pikr <port>        ${DIM}e.g. pikr 3000${RESET}`);
+              console.error(`          pikr <url>         ${DIM}e.g. pikr localhost:3000${RESET}\n`);
               process.exit(1);
               return;
             } else if (servers.length === 1) {
