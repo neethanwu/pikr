@@ -53,19 +53,26 @@ class ReactPlugin extends BasePlugin {
           // React 19+: _debugStack
           if (fiber._debugStack && typeof fiber._debugStack === 'object') {
             var stack = fiber._debugStack.stack || String(fiber._debugStack);
-            var m = stack.match(/at\\s+(\\w+)\\s+\\(https?:\\/\\/[^/]+\\/(src\\/[^?:]+)[^:]*:(\\d+):(\\d+)\\)/);
+            // Match: "at ComponentName (http://localhost:1420/src/App.tsx?t=...:42:7)"
+            // Capture any path after the host, not just src/
+            var m = stack.match(/at\\s+(\\w+)\\s+\\(https?:\\/\\/[^/]+\\/([^?:)]+)[^:]*:(\\d+):(\\d+)\\)/);
             if (!m) {
-              m = stack.match(/at\\s+https?:\\/\\/[^/]+\\/(src\\/[^?:]+)[^:]*:(\\d+):(\\d+)/);
+              // Also try: "at http://localhost:1420/src/App.tsx:42:7" (no component name)
+              m = stack.match(/at\\s+https?:\\/\\/[^/]+\\/([^?:)]+)[^:]*:(\\d+):(\\d+)/);
               if (m) m = [m[0], null, m[1], m[2], m[3]];
             }
             if (m) {
-              var cname = (fiber.type && (fiber.type.displayName || fiber.type.name)) || m[1] || null;
-              return {
-                componentName: cname,
-                filePath: m[2],
-                line: parseInt(m[3]) || null,
-                col: parseInt(m[4]) || null,
-              };
+              var filePath = m[2];
+              // Skip node_modules and vite internal paths
+              if (filePath && filePath.indexOf('node_modules') === -1 && filePath.indexOf('@vite') === -1) {
+                var cname = (fiber.type && (fiber.type.displayName || fiber.type.name)) || m[1] || null;
+                return {
+                  componentName: cname,
+                  filePath: filePath,
+                  line: parseInt(m[3]) || null,
+                  col: parseInt(m[4]) || null,
+                };
+              }
             }
           }
           fiber = fiber.return;
