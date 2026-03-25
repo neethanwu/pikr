@@ -7,6 +7,8 @@ dist/
 .pikr/
 docs/
 CONTEXT.md
+CLAUDE.md
+.impeccable.md
 .claude/
 .collaborator/
 .DS_Store
