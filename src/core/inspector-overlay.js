@@ -43,6 +43,7 @@ function _initOverlay() {
   let inspectMode = false;
   let hoveredElement = null;
   let captureCount = 0;
+  let hintShown = false;
   let collapseTimer = null;
 
   // --- Keyframes ---
@@ -278,6 +279,57 @@ function _initOverlay() {
     }, 1400);
   }
 
+  // --- Onboarding hint (shows once on first inspect toggle) ---
+  var hint = document.createElement("div");
+  hint.id = "__pikr-hint";
+  function kbdHint(text) {
+    return '<kbd style="font-family:' + T.mono + ';font-size:11px;padding:2px 6px;border-radius:4px;line-height:1.3;display:inline-block;background:rgba(250,250,249,0.1);border:1px solid rgba(250,250,249,0.12);color:rgba(250,250,249,0.6)">' + text + '</kbd>';
+  }
+  Object.assign(hint.style, {
+    position: "fixed",
+    top: "20px",
+    left: "50%",
+    transform: "translateX(-50%) translateY(-16px) scale(0.96)",
+    zIndex: "2147483647",
+    padding: "10px 18px",
+    borderRadius: T.radiusSm,
+    fontFamily: T.font,
+    fontSize: "13px",
+    color: "rgba(250,250,249,0.7)",
+    backgroundColor: "rgba(28, 25, 23, 0.9)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    boxShadow: T.shadow,
+    opacity: "0",
+    transition: "all " + dur(250) + " " + ease,
+    pointerEvents: "none",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    whiteSpace: "nowrap",
+  });
+  hint.innerHTML =
+    '<span style="color:rgba(250,250,249,0.9)">Click</span> to capture' +
+    '<span style="opacity:0.25;margin:0 2px">\u00b7</span>' +
+    kbdHint("Esc") +
+    '<span>to exit</span>';
+  document.documentElement.appendChild(hint);
+
+  var hintTimer = null;
+  function showHint() {
+    if (hintShown) return;
+    hintShown = true;
+    hint.style.opacity = "1";
+    hint.style.transform = "translateX(-50%) translateY(0) scale(1)";
+    hintTimer = setTimeout(dismissHint, 4000);
+  }
+  function dismissHint() {
+    if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
+    hint.style.opacity = "0";
+    hint.style.transform = "translateX(-50%) translateY(-16px) scale(0.96)";
+  }
+
   // --- Banner rendering (compact pill with Lucide square-mouse-pointer icon) ---
   function pickIcon(color) {
     return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;display:block;cursor:pointer">' +
@@ -320,7 +372,9 @@ function _initOverlay() {
     renderBanner();
     if (enabled) {
       document.documentElement.style.cursor = "crosshair";
+      showHint();
     } else {
+      dismissHint();
       document.documentElement.style.cursor = "";
       highlightVisible = false;
       highlight.style.opacity = "0";
@@ -426,6 +480,7 @@ function _initOverlay() {
       textContent: (el.textContent || "").trim().slice(0, 200),
     };
     captureCount++;
+    dismissHint();
     console.debug("__pikr__", JSON.stringify(data));
     showToast(data.tagName);
 
@@ -535,7 +590,7 @@ function _initOverlay() {
   }
 
   function cleanup() {
-    style.remove(); highlight.remove(); label.remove(); banner.remove(); toast.remove();
+    style.remove(); highlight.remove(); label.remove(); banner.remove(); toast.remove(); hint.remove();
     document.documentElement.style.cursor = "";
     document.removeEventListener("mousemove", onMouseMove, true);
     document.removeEventListener("click", onClick, true);
