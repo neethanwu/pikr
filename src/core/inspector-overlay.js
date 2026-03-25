@@ -354,9 +354,11 @@ function _initOverlay() {
 
   // Phase 1: Launch hint — "Click the pikr pill to start inspecting"
   var launchHintShown = false;
+  try { launchHintShown = sessionStorage.getItem("__pikr_hint_done") === "1"; } catch {}
   function showLaunchHint() {
     if (launchHintShown || hintShown) return;
     launchHintShown = true;
+    try { sessionStorage.setItem("__pikr_hint_done", "1"); } catch {}
     showHintWithContent(
       'Click the ' +
       '<span style="font-weight:700;color:rgba(250,250,249,0.9)">pikr</span>' +
@@ -366,9 +368,11 @@ function _initOverlay() {
   }
 
   // Phase 2: Inspect hint — "Click to capture · Esc to exit"
+  try { if (sessionStorage.getItem("__pikr_inspect_done") === "1") hintShown = true; } catch {}
   function showInspectHint() {
     if (hintShown) return;
     hintShown = true;
+    try { sessionStorage.setItem("__pikr_inspect_done", "1"); } catch {}
     showHintWithContent(
       '<span style="color:rgba(250,250,249,0.9)">Click</span> to capture' +
       '<span style="opacity:0.25;margin:0 2px">\u00b7</span>' +
