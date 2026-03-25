@@ -180,15 +180,18 @@ describe("listenForSelections", () => {
 });
 
 describe("full pipeline: overlay → click → selection", () => {
-  it("captures element on simulated click in inspect mode", async () => {
+  it("captures element via multi-select + Enter to send batch", async () => {
     serverUrl = await startServer();
     session = await launchBrowser({ url: serverUrl });
     await injectOverlay(session.page);
 
-    const received: SelectionEvent[] = [];
-    await listenForSelections(session.cdp, (event) => {
-      received.push(event);
-    });
+    const batches: any[] = [];
+    await listenForSelections(
+      session.cdp,
+      () => {}, // single selection handler (unused in multi-select)
+      undefined,
+      (event) => { batches.push(event); } // batch handler
+    );
 
     // Toggle to inspect mode via keyboard
     await session.page.keyboard.down("Meta");
@@ -198,21 +201,26 @@ describe("full pipeline: overlay → click → selection", () => {
     await session.page.keyboard.up("Meta");
     await new Promise((r) => setTimeout(r, 100));
 
-    // Verify we're in inspect mode (cursor changes to crosshair)
+    // Verify we're in inspect mode
     const cursor = await session.page.evaluate(() => {
       return document.documentElement.style.cursor;
     });
     expect(cursor).toBe("crosshair");
 
-    // Click the test button
+    // Click the test button (adds to selection)
     await session.page.click("#test-btn");
     await new Promise((r) => setTimeout(r, 300));
 
-    expect(received.length).toBeGreaterThanOrEqual(1);
-    const sel = received[0];
-    expect(sel.tagName).toBe("button");
-    expect(sel.html).toContain("Click Me");
-    expect(sel.selector).toContain("test-btn");
+    // Press Enter to send batch
+    await session.page.keyboard.press("Enter");
+    await new Promise((r) => setTimeout(r, 500));
+
+    expect(batches.length).toBeGreaterThanOrEqual(1);
+    const batch = batches[0];
+    expect(batch.type).toBe("batch");
+    expect(batch.selections.length).toBe(1);
+    expect(batch.selections[0].tagName).toBe("button");
+    expect(batch.selections[0].html).toContain("Click Me");
   });
 
   it("does NOT capture in browse mode", async () => {
@@ -232,7 +240,7 @@ describe("full pipeline: overlay → click → selection", () => {
     expect(received).toHaveLength(0);
   });
 
-  it("writes selection to log file through full pipeline", async () => {
+  it("writes batch to log file through full pipeline", async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), "pikr-e2e-"));
     const logPath = join(tmpDir, "selections.jsonl");
 
@@ -241,10 +249,20 @@ describe("full pipeline: overlay → click → selection", () => {
       session = await launchBrowser({ url: serverUrl });
       await injectOverlay(session.page);
 
-      await listenForSelections(session.cdp, async (event) => {
-        const selection = toSelection(event, "e2e-session", serverUrl);
-        await writeSelection(selection, { clipboard: false, logPath });
-      });
+      await listenForSelections(
+        session.cdp,
+        async () => {},
+        undefined,
+        async (event) => {
+          // Write batch as a single log entry
+          const { toBatchSelection, toBatchLogLine } = await import("../../src/core/selection.js");
+          const batch = toBatchSelection(event.selections, "e2e-session", serverUrl);
+          const { appendFile: af, mkdir: mk } = await import("node:fs/promises");
+          const { dirname: dn } = await import("node:path");
+          await mk(dn(logPath), { recursive: true });
+          await af(logPath, toBatchLogLine(batch) + "\n", "utf-8");
+        }
+      );
 
       // Toggle inspect mode
       await session.page.keyboard.down("Meta");
@@ -256,6 +274,10 @@ describe("full pipeline: overlay → click → selection", () => {
 
       // Click element
       await session.page.click("#test-btn");
+      await new Promise((r) => setTimeout(r, 300));
+
+      // Send batch with Enter
+      await session.page.keyboard.press("Enter");
       await new Promise((r) => setTimeout(r, 500));
 
       // Verify log file
@@ -265,7 +287,8 @@ describe("full pipeline: overlay → click → selection", () => {
 
       const entry = JSON.parse(lines[0]);
       expect(entry.sessionId).toBe("e2e-session");
-      expect(entry.html).toContain("Click Me");
+      expect(entry.selections).toBeDefined();
+      expect(entry.selections[0].html).toContain("Click Me");
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }

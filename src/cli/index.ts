@@ -8,6 +8,9 @@ import {
   listenForSelections,
   generateSessionId,
   toSelection,
+  toBatchSelection,
+  toBatchClipboardText,
+  toBatchLogLine,
   writeSelection,
   defaultLogPath,
   detectDevServers,
@@ -19,7 +22,10 @@ import {
   installSkill,
   PikrError,
 } from "../core/index.js";
-import type { BrowserSession, SelectionEvent } from "../core/index.js";
+import type { BrowserSession, SelectionEvent, BatchEvent } from "../core/index.js";
+import clipboardy from "clipboardy";
+import { appendFile, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
 
 const version = "0.1.0";
 
@@ -198,6 +204,45 @@ program
             console.error(`\n  ${BRAND} ${DIM}${selectionCount} element(s) captured${RESET}\n`);
             try { await session.browser.close(); } catch {}
             process.exit(0);
+          },
+          // Batch handler
+          async (event: BatchEvent) => {
+            const currentUrl = await session.page.url();
+
+            // Enrich each selection with plugins
+            const enrichments = await Promise.all(
+              event.selections.map((item) =>
+                plugins.enrich(session.cdp, {
+                  type: "selection",
+                  selector: item.selector,
+                  html: item.html,
+                  ancestry: item.ancestry,
+                  styles: item.styles,
+                  tagName: item.tagName,
+                  textContent: item.textContent,
+                })
+              )
+            );
+
+            const batch = toBatchSelection(event.selections, sessionId, currentUrl, enrichments);
+            selectionCount += event.selections.length;
+
+            // Write to clipboard
+            if (opts.clipboard) {
+              try {
+                const text = toBatchClipboardText(batch);
+                await clipboardy.write(text);
+              } catch {}
+            }
+
+            // Write to log
+            try {
+              await mkdir(dirname(logPath), { recursive: true });
+              await appendFile(logPath, toBatchLogLine(batch) + "\n", "utf-8");
+            } catch {}
+
+            const dest = opts.clipboard ? `${LIME}clipboard${RESET}` : `${DIM}${logPath}${RESET}`;
+            console.error(`  ${LIME}●${RESET} ${event.selections.length} elements → ${dest}`);
           }
         );
 
