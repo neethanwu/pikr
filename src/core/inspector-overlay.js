@@ -250,10 +250,10 @@ function _initOverlay() {
   Object.assign(toast.style, {
     position: "fixed", top: "20px", left: "50%",
     transform: "translateX(-50%) translateY(-16px) scale(0.96)",
-    zIndex: "2147483647", padding: "10px 18px", borderRadius: T.radiusSm,
+    zIndex: "2147483647", padding: "10px 18px", borderRadius: "20px",
     fontFamily: T.font, fontSize: "13px", fontWeight: "500",
-    color: "#4d7c0f", backgroundColor: T.surfaceLight,
-    border: "1px solid rgba(163, 230, 53, 0.25)",
+    color: "rgba(250,250,249,0.7)", backgroundColor: "rgba(28, 25, 23, 0.9)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
     boxShadow: T.shadow, opacity: "0",
     transition: "all " + dur(200) + " " + ease,
     pointerEvents: "none",
@@ -267,10 +267,10 @@ function _initOverlay() {
     if (toastTimer) clearTimeout(toastTimer);
     toast.innerHTML =
       '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">' +
-      '<circle cx="8" cy="8" r="7" stroke="#65a30d" stroke-width="1.5"/>' +
-      '<path d="M5 8l2 2 4-4" stroke="#65a30d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-      '<span style="color:' + T.textDark + ';font-weight:600">Copied</span>' +
-      '<span style="color:rgba(41,37,36,0.35);font-family:' + T.mono + ';font-size:11px">&lt;' + tagName + '&gt;</span>';
+      '<circle cx="8" cy="8" r="7" stroke="' + T.success + '" stroke-width="1.5"/>' +
+      '<path d="M5 8l2 2 4-4" stroke="' + T.success + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '<span style="color:rgba(250,250,249,0.9);font-weight:600">Copied</span>' +
+      '<span style="color:rgba(250,250,249,0.35);font-family:' + T.mono + ';font-size:11px">&lt;' + tagName + '&gt;</span>';
     toast.style.opacity = "1";
     toast.style.transform = "translateX(-50%) translateY(0) scale(1)";
     toastTimer = setTimeout(() => {
@@ -292,7 +292,7 @@ function _initOverlay() {
     transform: "translateX(-50%) translateY(-16px) scale(0.96)",
     zIndex: "2147483647",
     padding: "10px 18px",
-    borderRadius: T.radiusSm,
+    borderRadius: "20px",
     fontFamily: T.font,
     fontSize: "13px",
     color: "rgba(250,250,249,0.7)",
