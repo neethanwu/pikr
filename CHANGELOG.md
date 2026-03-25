@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-25
+
+### Added
+- Multi-select: click elements to build a selection set with numbered coral badges
+- Per-element comments: click a badge to add an optional annotation via popover with auto-wrap textarea
+- Batch send: press Enter or click send icon on pill to copy all selections to clipboard + log
+- Comment popover shows immediately on element click, auto-dismisses on next click (auto-save)
+- Confirm (✓) and cancel (×) icon buttons in comment popover
+- Selected elements highlighted with lime border
+- Smart badge positioning: viewport-aware, avoids clipping at screen edges
+
+### Changed
+- Clicking an element now adds to selection set (was: single capture + clipboard)
+- Batch clipboard format uses `---` separators with `[N]` indices and optional `comment:` lines
+- Onboarding hint updated: "Click elements to select · Enter to send · Esc to exit"
+
 ## [0.2.0] - 2026-03-24
 
 ### Added
@@ -45,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `prefers-reduced-motion` support throughout all animations
 - 48 tests (unit + integration + full CDP pipeline)
 
-[Unreleased]: https://github.com/neethanwu/pikr/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/neethanwu/pikr/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/neethanwu/pikr/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/neethanwu/pikr/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/neethanwu/pikr/releases/tag/v0.1.0
