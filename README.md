@@ -9,26 +9,30 @@ https://github.com/user-attachments/assets/4f31a091-c307-4621-b492-80e383316176
 
 ## Quickstart
 
-Try it without installing:
-
-```bash
-npx @neethan/pikr <port>    # e.g. npx @neethan/pikr 3000
-```
-
-Or install globally — this also lets AI agents launch pikr and read selections directly:
-
 ```bash
 npm install -g @neethan/pikr
-pikr                        # auto-detect running dev server
+```
+
+Then from any project folder:
+
+```bash
+pikr
+```
+
+That's it. pikr starts your dev server if needed, opens Chrome, and you're ready to pick elements.
+
+Or specify a port directly:
+
+```bash
 pikr <port>                 # e.g. pikr 3000, pikr 5173
 ```
 
 ## How it works
 
-1. pikr opens a Chromium window showing your app
+1. pikr detects your project, starts the dev server if needed, and opens Chrome
 2. Click the pikr pill to toggle inspect mode
 3. Hover to highlight elements, click to capture
-4. Structured context is copied to clipboard
+4. Structured context is copied to clipboard — including source file location
 5. Paste into any terminal agent (Claude Code, Codex, OpenCode, Amp, ...)
 6. Press **ESC** to exit inspect mode
 
@@ -51,12 +55,10 @@ Every capture is also logged to `~/.pikr/selections.jsonl`.
 
 pikr auto-detects Vue and React projects and maps elements back to source files:
 
-- **Vue 3** — component name + file path via `__file` (works in dev mode, no extra setup)
-- **React 18** — component name + file:line:col via `_debugSource` (works in dev mode)
-- **React 19+** — best-effort file:line from `_debugStack` parsing
+- **Vue 3** — component name + file path (works in dev mode, no extra setup)
+- **React 18** — component name + file:line:col (works in dev mode)
+- **React 19+** — best-effort file:line from stack trace parsing
 - **React (any)** — precise file:line:col if `@react-dev-inspector/babel-plugin` is installed
-
-Source info appears in both clipboard output and the JSONL log.
 
 ## Agent integration
 
@@ -64,17 +66,16 @@ pikr works with any terminal agent out of the box — just paste the clipboard o
 
 For deeper integration, agents can:
 
-1. Launch pikr as a background process: `pikr 3000 &`
+1. Launch pikr as a background process: `pikr &`
 2. Read selections from `~/.pikr/selections.jsonl` (NDJSON, one entry per line)
 3. Each entry includes `selector`, `html`, `styles`, `ancestry`, `component`, `filePath`, and `sessionId`
 
 ## Options
 
 ```
-pikr                       Auto-detect dev server
-pikr 3000                  Port shorthand
-pikr localhost:3000        URL without http://
-pikr http://localhost:3000 Full URL
+pikr                       Auto-start or auto-detect dev server
+pikr <port>                Port shorthand (e.g. pikr 3000)
+pikr <url>                 Full URL (e.g. pikr localhost:3000)
 pikr --log <path>          Custom log file path
 pikr --no-clipboard        Log only, skip clipboard
 pikr --plugin <path>       Load a framework plugin
