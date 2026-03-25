@@ -31,7 +31,7 @@ function _initOverlay() {
     font: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
     mono: 'ui-monospace, "SF Mono", "Cascadia Mono", "Fira Code", Menlo, Consolas, monospace',
     ease: "cubic-bezier(0.16, 1, 0.3, 1)",
-    shadow: "0 8px 32px rgba(28,25,23,0.14), 0 2px 8px rgba(28,25,23,0.08)",
+    shadow: "0 12px 40px rgba(28,25,23,0.2), 0 4px 12px rgba(28,25,23,0.1)",
     shadowSm: "0 2px 12px rgba(28,25,23,0.08), 0 1px 4px rgba(28,25,23,0.04)",
   };
 
@@ -141,12 +141,29 @@ function _initOverlay() {
   document.documentElement.appendChild(banner);
 
   function setDefaultPosition() {
+    // Restore position from sessionStorage (persists across navigation, not refresh)
+    try {
+      var saved = sessionStorage.getItem("__pikr_pos");
+      if (saved) {
+        var p = JSON.parse(saved);
+        posX = p.x; posY = p.y; snappedEdge = p.edge || "bottom";
+        clampPosition();
+        applyPosition();
+        return;
+      }
+    } catch {}
+    // Default: center bottom
     var rect = banner.getBoundingClientRect();
-    // Center horizontally, then snap to bottom edge (same margin as snapToEdge)
     posX = (window.innerWidth - rect.width) / 2;
     posY = window.innerHeight - rect.height - 8;
     snappedEdge = "bottom";
     applyPosition();
+  }
+
+  function savePosition() {
+    try {
+      sessionStorage.setItem("__pikr_pos", JSON.stringify({ x: posX, y: posY, edge: snappedEdge }));
+    } catch {}
   }
 
   function applyPosition(animate) {
@@ -188,6 +205,7 @@ function _initOverlay() {
     else if (min === distT) { posY = m; snappedEdge = "top"; }
     else { posY = vh - h - m; snappedEdge = "bottom"; }
     applyPosition(animate);
+    savePosition();
   }
 
 
