@@ -279,13 +279,13 @@ function _initOverlay() {
     }, 1400);
   }
 
-  // --- Onboarding hint (shows once on first inspect toggle) ---
+  // --- Onboarding hints (two phases) ---
   var hint = document.createElement("div");
   hint.id = "__pikr-hint";
   function kbdHint(text) {
     return '<kbd style="font-family:' + T.mono + ';font-size:11px;padding:2px 6px;border-radius:4px;line-height:1.3;display:inline-block;background:rgba(250,250,249,0.1);border:1px solid rgba(250,250,249,0.12);color:rgba(250,250,249,0.6)">' + text + '</kbd>';
   }
-  Object.assign(hint.style, {
+  var hintBaseStyle = {
     position: "fixed",
     top: "20px",
     left: "50%",
@@ -308,27 +308,60 @@ function _initOverlay() {
     alignItems: "center",
     gap: "6px",
     whiteSpace: "nowrap",
-  });
-  hint.innerHTML =
-    '<span style="color:rgba(250,250,249,0.9)">Click</span> to capture' +
-    '<span style="opacity:0.25;margin:0 2px">\u00b7</span>' +
-    kbdHint("Esc") +
-    '<span>to exit</span>';
+  };
+  Object.assign(hint.style, hintBaseStyle);
   document.documentElement.appendChild(hint);
 
   var hintTimer = null;
-  function showHint() {
-    if (hintShown) return;
-    hintShown = true;
+
+  function setHintContent(html) {
+    hint.innerHTML = html;
+  }
+
+  function showHintWithContent(html, duration) {
+    if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
+    setHintContent(html);
     hint.style.opacity = "1";
     hint.style.transform = "translateX(-50%) translateY(0) scale(1)";
-    hintTimer = setTimeout(dismissHint, 4000);
+    if (duration) {
+      hintTimer = setTimeout(dismissHint, duration);
+    }
   }
+
   function dismissHint() {
     if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
     hint.style.opacity = "0";
     hint.style.transform = "translateX(-50%) translateY(-16px) scale(0.96)";
   }
+
+  // Phase 1: Launch hint — "Click the pikr pill to start inspecting"
+  var launchHintShown = false;
+  function showLaunchHint() {
+    if (launchHintShown || hintShown) return;
+    launchHintShown = true;
+    showHintWithContent(
+      'Click the ' +
+      '<span style="font-weight:700;color:rgba(250,250,249,0.9)">pikr</span>' +
+      ' pill to start inspecting',
+      5000
+    );
+  }
+
+  // Phase 2: Inspect hint — "Click to capture · Esc to exit"
+  function showInspectHint() {
+    if (hintShown) return;
+    hintShown = true;
+    showHintWithContent(
+      '<span style="color:rgba(250,250,249,0.9)">Click</span> to capture' +
+      '<span style="opacity:0.25;margin:0 2px">\u00b7</span>' +
+      kbdHint("Esc") +
+      '<span>to exit</span>',
+      4000
+    );
+  }
+
+  // Show launch hint after banner entrance animation
+  setTimeout(showLaunchHint, reducedMotion ? 100 : 600);
 
   // --- Banner rendering (compact pill with Lucide square-mouse-pointer icon) ---
   function pickIcon(color) {
@@ -372,7 +405,8 @@ function _initOverlay() {
     renderBanner();
     if (enabled) {
       document.documentElement.style.cursor = "crosshair";
-      showHint();
+      dismissHint(); // dismiss launch hint
+      showInspectHint();
     } else {
       dismissHint();
       document.documentElement.style.cursor = "";
