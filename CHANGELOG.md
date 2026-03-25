@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-24
+
+### Added
+- Built-in React source mapping — auto-detects React, maps elements to component name + file:line:col via fiber tree (_debugSource for React 18, _debugStack parsing for React 19+)
+- Built-in Vue source mapping — auto-detects Vue 3, maps elements to component name + file path via __vueParentComponent.type.__file
+- BasePlugin pattern for easy framework plugin authoring (~30 lines per plugin)
+- Auto-start dev server — run `pikr` in a project folder with no server running, it starts `dev` script and opens automatically
+- Two-phase onboarding hints: launch hint ("Click the pikr pill") + inspect hint ("Click to capture · Esc to exit"), persisted across navigation
+- Pill position persists across same-origin navigation via sessionStorage
+- Tauri port 1420 added to auto-detect
+
+### Changed
+- Clipboard output includes `source:` line when framework plugin provides file mapping
+- All floating chrome (banner, toast, hints) normalized to pill shape (20px radius) with dark theme
+- Stronger shadow for better floating visibility on any background
+- React 19 _debugStack regex broadened to match any path (not just src/)
+
+### Fixed
+- CI uses Node 20 (vitest 4.x requires node:util.styleText)
+- CI runs unit tests only (integration tests need Chrome)
+
 ## [0.1.0] - 2026-03-22
 
 ### Added
@@ -24,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `prefers-reduced-motion` support throughout all animations
 - 48 tests (unit + integration + full CDP pipeline)
 
-[Unreleased]: https://github.com/neethanwu/pikr/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/neethanwu/pikr/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/neethanwu/pikr/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/neethanwu/pikr/releases/tag/v0.1.0
