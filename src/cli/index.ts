@@ -27,7 +27,13 @@ import clipboardy from "clipboardy";
 import { appendFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 
-const version = "0.1.0";
+import { readFileSync } from "node:fs";
+import { resolve, dirname as dn } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __cliDir = dn(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(resolve(__cliDir, "../../package.json"), "utf-8"));
+const version = pkg.version;
 
 // --- Branded terminal output ---
 const DIM = "\x1b[2m";

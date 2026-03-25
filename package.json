@@ -1,6 +1,6 @@
 {
   "name": "@neethan/pikr",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Universal element picker for terminal-based AI coding agents",
   "type": "module",
   "main": "dist/core/index.js",
