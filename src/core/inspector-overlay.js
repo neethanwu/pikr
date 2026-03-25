@@ -606,23 +606,13 @@ function _initOverlay() {
     positionBadge(badge, el);
     document.documentElement.appendChild(badge);
 
-    // Click badge: if comment popover not open, toggle deselect
+    // Click badge → always open comment popover (not deselect)
     badge.addEventListener("click", function (e) {
       e.stopPropagation();
       e.preventDefault();
       var idx = selectedElements.findIndex(function (s) { return s.badge === badge; });
       if (idx === -1) return;
-      // If popover is open for this badge, don't deselect
-      if (commentPopover.style.opacity === "1" && commentTarget === idx) {
-        return;
-      }
-      // Show comment popover on first click, deselect on second
-      if (!selectedElements[idx].popoverShown) {
-        selectedElements[idx].popoverShown = true;
-        showCommentPopover(idx);
-      } else {
-        deselectElement(idx);
-      }
+      showCommentPopover(idx);
     });
 
     return badge;
@@ -650,13 +640,16 @@ function _initOverlay() {
   }
 
   function addSelection(el) {
-    // Check if already selected
+    // Check if already selected → deselect
     for (var i = 0; i < selectedElements.length; i++) {
       if (selectedElements[i].el === el) {
         deselectElement(i);
         return;
       }
     }
+
+    // Auto-dismiss any open popover (auto-save)
+    dismissCommentPopover();
 
     var html = el.outerHTML;
     var maxLen = 2000;
@@ -670,9 +663,17 @@ function _initOverlay() {
     };
 
     var badge = createBadge(selectedElements.length, el);
-    selectedElements.push({ el: el, data: data, comment: "", badge: badge, popoverShown: false });
+    var idx = selectedElements.length;
+    selectedElements.push({ el: el, data: data, comment: "", badge: badge, originalOutline: el.style.outline });
+
+    // Add selection border to element
+    el.style.outline = "2px solid " + T.accentBorder;
+
     renderBanner();
     showToast("+" + data.tagName);
+
+    // Show comment popover immediately
+    setTimeout(function () { showCommentPopover(idx); }, 100);
 
     // Pulse highlight
     highlight.style.borderColor = T.success;
@@ -691,6 +692,8 @@ function _initOverlay() {
   function deselectElement(index) {
     var entry = selectedElements[index];
     if (entry.badge) entry.badge.remove();
+    // Restore original outline
+    if (entry.el) entry.el.style.outline = entry.originalOutline || "";
     selectedElements.splice(index, 1);
     renumberBadges();
     renderBanner();
@@ -700,6 +703,7 @@ function _initOverlay() {
   function clearAllSelections() {
     for (var i = 0; i < selectedElements.length; i++) {
       if (selectedElements[i].badge) selectedElements[i].badge.remove();
+      if (selectedElements[i].el) selectedElements[i].el.style.outline = selectedElements[i].originalOutline || "";
     }
     selectedElements = [];
     dismissCommentPopover();
@@ -736,11 +740,11 @@ function _initOverlay() {
   Object.assign(commentPopover.style, {
     position: "fixed",
     zIndex: "2147483647",
-    padding: "8px 12px",
-    borderRadius: "20px",
+    padding: "8px 10px",
+    borderRadius: "12px",
     fontFamily: T.font,
     fontSize: "13px",
-    backgroundColor: "rgba(28, 25, 23, 0.9)",
+    backgroundColor: "rgba(28, 25, 23, 0.92)",
     border: "1px solid rgba(255, 255, 255, 0.1)",
     boxShadow: T.shadow,
     opacity: "0",
@@ -749,10 +753,10 @@ function _initOverlay() {
     backdropFilter: "blur(20px)",
     WebkitBackdropFilter: "blur(20px)",
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-end",
     gap: "6px",
   });
-  var commentInput = document.createElement("input");
+  var commentInput = document.createElement("textarea");
   Object.assign(commentInput.style, {
     background: "transparent",
     border: "none",
@@ -760,11 +764,60 @@ function _initOverlay() {
     color: "rgba(250,250,249,0.9)",
     fontFamily: T.font,
     fontSize: "13px",
-    width: "180px",
+    width: "200px",
+    minHeight: "20px",
+    maxHeight: "80px",
     padding: "0",
+    resize: "none",
+    lineHeight: "1.4",
+    overflow: "hidden",
   });
   commentInput.placeholder = "Add a comment...";
+  commentInput.rows = 1;
+  // Auto-grow textarea
+  commentInput.addEventListener("input", function () {
+    commentInput.style.height = "auto";
+    commentInput.style.height = Math.min(commentInput.scrollHeight, 80) + "px";
+  });
+
+  // Action buttons
+  var commentActions = document.createElement("div");
+  Object.assign(commentActions.style, {
+    display: "flex",
+    gap: "2px",
+    flexShrink: "0",
+  });
+
+  function makeActionBtn(svgPath, color, onClick) {
+    var btn = document.createElement("div");
+    Object.assign(btn.style, {
+      width: "22px", height: "22px",
+      borderRadius: "4px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      transition: "background " + dur(100) + " ease",
+    });
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' + svgPath + '</svg>';
+    btn.addEventListener("mouseenter", function () { btn.style.background = "rgba(250,250,249,0.1)"; });
+    btn.addEventListener("mouseleave", function () { btn.style.background = "transparent"; });
+    btn.addEventListener("click", function (e) { e.stopPropagation(); onClick(); });
+    return btn;
+  }
+
+  var confirmBtn = makeActionBtn('<polyline points="20 6 9 17 4 12"/>', T.success, function () {
+    dismissCommentPopover();
+  });
+  var cancelBtn = makeActionBtn('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>', "rgba(250,250,249,0.4)", function () {
+    commentInput.value = "";
+    dismissCommentPopover();
+  });
+
+  commentActions.appendChild(confirmBtn);
+  commentActions.appendChild(cancelBtn);
   commentPopover.appendChild(commentInput);
+  commentPopover.appendChild(commentActions);
   document.documentElement.appendChild(commentPopover);
 
   var commentTarget = -1;
@@ -778,14 +831,21 @@ function _initOverlay() {
     commentPopover.style.left = rect.left + "px";
     // Clamp to viewport
     var vw = window.innerWidth;
-    var popW = 220;
+    var popW = 250;
     if (rect.left + popW > vw - 12) {
       commentPopover.style.left = (vw - popW - 12) + "px";
     }
     commentInput.value = entry.comment || "";
+    commentInput.style.height = "auto";
     commentPopover.style.opacity = "1";
     commentPopover.style.pointerEvents = "auto";
-    setTimeout(function () { commentInput.focus(); }, 50);
+    setTimeout(function () {
+      commentInput.focus();
+      // Auto-size if there's existing content
+      if (commentInput.value) {
+        commentInput.style.height = Math.min(commentInput.scrollHeight, 80) + "px";
+      }
+    }, 50);
   }
 
   function dismissCommentPopover() {
@@ -807,13 +867,13 @@ function _initOverlay() {
 
   commentInput.addEventListener("keydown", function (e) {
     e.stopPropagation();
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       dismissCommentPopover();
     }
     if (e.key === "Escape") {
       e.preventDefault();
-      commentInput.value = ""; // discard
+      commentInput.value = "";
       dismissCommentPopover();
     }
   });
@@ -894,14 +954,9 @@ function _initOverlay() {
     if (isPikrElement(e.target)) return;
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
 
-    // Dismiss comment popover if open
-    if (commentPopover.style.opacity === "1") {
-      dismissCommentPopover();
-      return;
-    }
-
     var el = getElementUnderCursor(e);
     if (!el || isPikrElement(el)) return;
+    // addSelection auto-dismisses any open popover (with auto-save)
     addSelection(el);
     dismissHint();
   }

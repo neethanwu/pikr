@@ -207,11 +207,15 @@ describe("full pipeline: overlay → click → selection", () => {
     });
     expect(cursor).toBe("crosshair");
 
-    // Click the test button (adds to selection)
+    // Click the test button (adds to selection + opens comment popover)
     await session.page.click("#test-btn");
     await new Promise((r) => setTimeout(r, 300));
 
-    // Press Enter to send batch
+    // Dismiss comment popover first (Enter in popover confirms comment)
+    await session.page.keyboard.press("Enter");
+    await new Promise((r) => setTimeout(r, 200));
+
+    // Now press Enter to send batch (comment popover is closed, global handler catches it)
     await session.page.keyboard.press("Enter");
     await new Promise((r) => setTimeout(r, 500));
 
@@ -272,9 +276,13 @@ describe("full pipeline: overlay → click → selection", () => {
       await session.page.keyboard.up("Meta");
       await new Promise((r) => setTimeout(r, 100));
 
-      // Click element
+      // Click element (adds to selection + opens comment popover)
       await session.page.click("#test-btn");
       await new Promise((r) => setTimeout(r, 300));
+
+      // Dismiss comment popover
+      await session.page.keyboard.press("Enter");
+      await new Promise((r) => setTimeout(r, 200));
 
       // Send batch with Enter
       await session.page.keyboard.press("Enter");
