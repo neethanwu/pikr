@@ -15,12 +15,29 @@ export interface SelectionEvent {
   textContent: string;
 }
 
+export interface BatchSelectionItem {
+  index: number;
+  selector: string;
+  html: string;
+  ancestry: string;
+  styles: Record<string, string>;
+  tagName: string;
+  textContent: string;
+  comment: string | null;
+}
+
+export interface BatchEvent {
+  type: "batch";
+  selections: BatchSelectionItem[];
+}
+
 export interface CloseEvent {
   type: "close";
 }
 
-export type PikrEvent = SelectionEvent | CloseEvent;
+export type PikrEvent = SelectionEvent | BatchEvent | CloseEvent;
 export type SelectionHandler = (event: SelectionEvent) => void;
+export type BatchHandler = (event: BatchEvent) => void;
 export type CloseHandler = () => void;
 
 function loadOverlayScript(): string {
@@ -42,18 +59,15 @@ function loadOverlayScript(): string {
 
 export async function injectOverlay(page: Page): Promise<void> {
   const script = loadOverlayScript();
-
-  // Inject on current page
   await page.evaluate(script);
-
-  // Persist across navigations
   await page.evaluateOnNewDocument(script);
 }
 
 export async function listenForSelections(
   cdp: CDPSession,
   handler: SelectionHandler,
-  onClose?: CloseHandler
+  onClose?: CloseHandler,
+  onBatch?: BatchHandler
 ): Promise<void> {
   await cdp.send("Runtime.enable");
 
@@ -71,6 +85,8 @@ export async function listenForSelections(
       const data = JSON.parse(payload.value) as PikrEvent;
       if (data.type === "selection") {
         handler(data as SelectionEvent);
+      } else if (data.type === "batch" && onBatch) {
+        onBatch(data as BatchEvent);
       } else if (data.type === "close" && onClose) {
         onClose();
       }

@@ -2,10 +2,10 @@ export { launchBrowser, connectBrowser, findChrome } from "./browser.js";
 export type { BrowserSession, LaunchOptions, ConnectOptions } from "./browser.js";
 
 export { injectOverlay, listenForSelections } from "./inspector.js";
-export type { SelectionEvent, CloseEvent, PikrEvent, SelectionHandler, CloseHandler } from "./inspector.js";
+export type { SelectionEvent, BatchEvent, BatchSelectionItem, CloseEvent, PikrEvent, SelectionHandler, BatchHandler, CloseHandler } from "./inspector.js";
 
-export { generateSessionId, toSelection, toClipboardText, toLogLine } from "./selection.js";
-export type { Selection } from "./selection.js";
+export { generateSessionId, toSelection, toClipboardText, toLogLine, toBatchSelection, toBatchClipboardText, toBatchLogLine } from "./selection.js";
+export type { Selection, BatchSelection } from "./selection.js";
 
 export { writeSelection, defaultLogPath } from "./output.js";
 export type { OutputOptions } from "./output.js";

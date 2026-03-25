@@ -374,7 +374,10 @@ function _initOverlay() {
     hintShown = true;
     try { sessionStorage.setItem("__pikr_inspect_done", "1"); } catch {}
     showHintWithContent(
-      '<span style="color:rgba(250,250,249,0.9)">Click</span> to capture' +
+      '<span style="color:rgba(250,250,249,0.9)">Click</span> elements to select' +
+      '<span style="opacity:0.25;margin:0 2px">\u00b7</span>' +
+      kbdHint("Enter") +
+      '<span>to send</span>' +
       '<span style="opacity:0.25;margin:0 2px">\u00b7</span>' +
       kbdHint("Esc") +
       '<span>to exit</span>',
@@ -399,6 +402,12 @@ function _initOverlay() {
     var wm = 'font-size:13px;font-weight:700;letter-spacing:-0.03em;line-height:15px';
     var row = 'display:flex;align-items:center;gap:8px;padding:8px 14px';
 
+    // Send icon (Lucide arrow-up-from-line)
+    var sendIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;display:block;cursor:pointer">' +
+      '<path d="m18 9-6-6-6 6"/><path d="M12 3v14"/><path d="M5 21h14"/></svg>';
+
+    var selCount = selectedElements.length;
+
     if (inspectMode) {
       banner.style.backgroundColor = "rgba(28, 25, 23, 0.9)";
       banner.style.border = "1px solid rgba(255, 255, 255, 0.1)";
@@ -407,8 +416,20 @@ function _initOverlay() {
         '<div style="' + dot + ';background:' + T.accent + ';' +
         (reducedMotion ? '' : 'animation:__pikr-dot-pulse 2s ease infinite') + '"></div>' +
         '<span style="' + wm + ';color:rgba(250,250,249,0.85)">pikr</span>' +
-        pickIcon("rgba(250,250,249,0.6)") +
+        (selCount > 0
+          ? '<span id="__pikr-send" style="display:flex;align-items:center;gap:4px;cursor:pointer;color:' + T.success + '">' +
+            sendIcon +
+            '<span style="font-size:11px;font-weight:600;font-feature-settings:\'tnum\'">' + selCount + '</span></span>'
+          : pickIcon("rgba(250,250,249,0.6)")) +
         '</div>';
+      // Attach send click handler
+      var sendBtn = document.getElementById("__pikr-send");
+      if (sendBtn) {
+        sendBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          sendBatch();
+        });
+      }
     } else {
       banner.style.backgroundColor = "rgba(255, 252, 249, 0.92)";
       banner.style.border = "1px solid rgba(0, 0, 0, 0.08)";
@@ -431,6 +452,7 @@ function _initOverlay() {
       showInspectHint();
     } else {
       dismissHint();
+      dismissCommentPopover();
       document.documentElement.style.cursor = "";
       highlightVisible = false;
       highlight.style.opacity = "0";
@@ -556,21 +578,276 @@ function _initOverlay() {
     }, 350);
   }
 
+  // --- Multi-select ---
+  var selectedElements = []; // { el, data, comment, badge }
+
+  function createBadge(index, el) {
+    var badge = document.createElement("div");
+    badge.className = "__pikr-badge";
+    Object.assign(badge.style, {
+      position: "fixed",
+      zIndex: "2147483646",
+      width: "18px", height: "18px",
+      borderRadius: "50%",
+      background: T.accent,
+      color: "#fff",
+      fontFamily: T.mono,
+      fontSize: "10px",
+      fontWeight: "700",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      boxShadow: T.shadowSm,
+      transition: "background " + dur(150) + " ease, transform " + dur(100) + " ease",
+      pointerEvents: "auto",
+    });
+    badge.textContent = String(index + 1);
+    positionBadge(badge, el);
+    document.documentElement.appendChild(badge);
+
+    // Click badge: if comment popover not open, toggle deselect
+    badge.addEventListener("click", function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+      var idx = selectedElements.findIndex(function (s) { return s.badge === badge; });
+      if (idx === -1) return;
+      // If popover is open for this badge, don't deselect
+      if (commentPopover.style.opacity === "1" && commentTarget === idx) {
+        return;
+      }
+      // Show comment popover on first click, deselect on second
+      if (!selectedElements[idx].popoverShown) {
+        selectedElements[idx].popoverShown = true;
+        showCommentPopover(idx);
+      } else {
+        deselectElement(idx);
+      }
+    });
+
+    return badge;
+  }
+
+  function positionBadge(badge, el) {
+    var rect = el.getBoundingClientRect();
+    badge.style.top = (rect.top - 6) + "px";
+    badge.style.left = (rect.right - 12) + "px";
+  }
+
+  function repositionAllBadges() {
+    for (var i = 0; i < selectedElements.length; i++) {
+      var s = selectedElements[i];
+      if (s.el && s.badge) {
+        positionBadge(s.badge, s.el);
+      }
+    }
+  }
+
+  function renumberBadges() {
+    for (var i = 0; i < selectedElements.length; i++) {
+      selectedElements[i].badge.textContent = String(i + 1);
+    }
+  }
+
+  function addSelection(el) {
+    // Check if already selected
+    for (var i = 0; i < selectedElements.length; i++) {
+      if (selectedElements[i].el === el) {
+        deselectElement(i);
+        return;
+      }
+    }
+
+    var html = el.outerHTML;
+    var maxLen = 2000;
+    var data = {
+      selector: getSelector(el),
+      html: html.length > maxLen ? html.slice(0, maxLen) + "..." : html,
+      ancestry: getAncestry(el),
+      styles: getKeyStyles(el),
+      tagName: el.tagName.toLowerCase(),
+      textContent: (el.textContent || "").trim().slice(0, 200),
+    };
+
+    var badge = createBadge(selectedElements.length, el);
+    selectedElements.push({ el: el, data: data, comment: "", badge: badge, popoverShown: false });
+    renderBanner();
+    showToast("+" + data.tagName);
+
+    // Pulse highlight
+    highlight.style.borderColor = T.success;
+    highlight.style.backgroundColor = T.successBg;
+    if (!reducedMotion) {
+      scaleSpring.value = 1; scaleSpring.target = 0.97; scaleSpring.velocity = 0;
+      startScaleSpring();
+      setTimeout(function () { scaleSpring.target = 1; scaleSpring.velocity = 3; startScaleSpring(); }, 60);
+    }
+    setTimeout(function () {
+      highlight.style.borderColor = T.accentBorder;
+      highlight.style.backgroundColor = T.accentSoft;
+    }, 350);
+  }
+
+  function deselectElement(index) {
+    var entry = selectedElements[index];
+    if (entry.badge) entry.badge.remove();
+    selectedElements.splice(index, 1);
+    renumberBadges();
+    renderBanner();
+    dismissCommentPopover();
+  }
+
+  function clearAllSelections() {
+    for (var i = 0; i < selectedElements.length; i++) {
+      if (selectedElements[i].badge) selectedElements[i].badge.remove();
+    }
+    selectedElements = [];
+    dismissCommentPopover();
+    renderBanner();
+  }
+
+  function sendBatch() {
+    if (selectedElements.length === 0) return;
+    var batch = [];
+    for (var i = 0; i < selectedElements.length; i++) {
+      var s = selectedElements[i];
+      batch.push({
+        index: i + 1,
+        selector: s.data.selector,
+        html: s.data.html,
+        ancestry: s.data.ancestry,
+        styles: s.data.styles,
+        tagName: s.data.tagName,
+        textContent: s.data.textContent,
+        comment: s.comment || null,
+      });
+    }
+    var count = batch.length;
+    console.debug("__pikr__", JSON.stringify({ type: "batch", selections: batch }));
+    captureCount += count;
+    clearAllSelections();
+    showToast(count + " elements");
+    dismissHint();
+  }
+
+  // --- Comment popover ---
+  var commentPopover = document.createElement("div");
+  commentPopover.id = "__pikr-comment";
+  Object.assign(commentPopover.style, {
+    position: "fixed",
+    zIndex: "2147483647",
+    padding: "8px 12px",
+    borderRadius: "20px",
+    fontFamily: T.font,
+    fontSize: "13px",
+    backgroundColor: "rgba(28, 25, 23, 0.9)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    boxShadow: T.shadow,
+    opacity: "0",
+    transition: "all " + dur(150) + " " + ease,
+    pointerEvents: "none",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  });
+  var commentInput = document.createElement("input");
+  Object.assign(commentInput.style, {
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    color: "rgba(250,250,249,0.9)",
+    fontFamily: T.font,
+    fontSize: "13px",
+    width: "180px",
+    padding: "0",
+  });
+  commentInput.placeholder = "Add a comment...";
+  commentPopover.appendChild(commentInput);
+  document.documentElement.appendChild(commentPopover);
+
+  var commentTarget = -1;
+
+  function showCommentPopover(index) {
+    commentTarget = index;
+    var entry = selectedElements[index];
+    if (!entry) return;
+    var rect = entry.badge.getBoundingClientRect();
+    commentPopover.style.top = (rect.bottom + 8) + "px";
+    commentPopover.style.left = rect.left + "px";
+    // Clamp to viewport
+    var vw = window.innerWidth;
+    var popW = 220;
+    if (rect.left + popW > vw - 12) {
+      commentPopover.style.left = (vw - popW - 12) + "px";
+    }
+    commentInput.value = entry.comment || "";
+    commentPopover.style.opacity = "1";
+    commentPopover.style.pointerEvents = "auto";
+    setTimeout(function () { commentInput.focus(); }, 50);
+  }
+
+  function dismissCommentPopover() {
+    if (commentTarget >= 0 && commentTarget < selectedElements.length) {
+      var val = commentInput.value.trim();
+      selectedElements[commentTarget].comment = val;
+      // Badge turns lime if commented
+      if (val && selectedElements[commentTarget].badge) {
+        selectedElements[commentTarget].badge.style.background = T.success;
+      } else if (selectedElements[commentTarget].badge) {
+        selectedElements[commentTarget].badge.style.background = T.accent;
+      }
+    }
+    commentTarget = -1;
+    commentPopover.style.opacity = "0";
+    commentPopover.style.pointerEvents = "none";
+    commentInput.blur();
+  }
+
+  commentInput.addEventListener("keydown", function (e) {
+    e.stopPropagation();
+    if (e.key === "Enter") {
+      e.preventDefault();
+      dismissCommentPopover();
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      commentInput.value = ""; // discard
+      dismissCommentPopover();
+    }
+  });
+
+  // Clicking outside popover dismisses it
+  commentPopover.addEventListener("click", function (e) { e.stopPropagation(); });
+
   // --- Helpers ---
   function isPikrElement(el) {
     var cur = el;
     while (cur) {
       if (cur.id && cur.id.startsWith("__pikr")) return true;
+      if (cur.className && typeof cur.className === "string" && cur.className.indexOf("__pikr") !== -1) return true;
       cur = cur.parentElement;
     }
     return false;
   }
 
   function getElementUnderCursor(e) {
+    // Hide pikr elements so elementFromPoint pierces through
     var prev = highlight.style.display;
     highlight.style.display = "none";
+    // Also hide badges temporarily
+    var badgeDisplays = [];
+    for (var i = 0; i < selectedElements.length; i++) {
+      var b = selectedElements[i].badge;
+      if (b) { badgeDisplays.push(b.style.display); b.style.display = "none"; }
+    }
     var el = document.elementFromPoint(e.clientX, e.clientY);
     highlight.style.display = prev;
+    for (var j = 0; j < selectedElements.length; j++) {
+      var b2 = selectedElements[j].badge;
+      if (b2 && badgeDisplays[j] !== undefined) b2.style.display = badgeDisplays[j];
+    }
     return el;
   }
 
@@ -616,19 +893,35 @@ function _initOverlay() {
     if (!inspectMode) return;
     if (isPikrElement(e.target)) return;
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+
+    // Dismiss comment popover if open
+    if (commentPopover.style.opacity === "1") {
+      dismissCommentPopover();
+      return;
+    }
+
     var el = getElementUnderCursor(e);
     if (!el || isPikrElement(el)) return;
-    captureElement(el);
+    addSelection(el);
+    dismissHint();
   }
 
   function onKeyDown(e) {
+    // Don't intercept keys when comment input is focused
+    if (document.activeElement === commentInput) return;
+
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "x") {
       e.preventDefault(); setInspectMode(!inspectMode); return;
+    }
+    // Enter sends batch
+    if (e.key === "Enter" && inspectMode && selectedElements.length > 0) {
+      e.preventDefault(); sendBatch(); return;
     }
     if (e.key === "Escape") {
       e.preventDefault();
       if (inspectMode) {
-        setInspectMode(false); // ESC exits inspect mode, not pikr
+        clearAllSelections();
+        setInspectMode(false);
       }
     }
   }
@@ -646,7 +939,8 @@ function _initOverlay() {
   }
 
   function cleanup() {
-    style.remove(); highlight.remove(); label.remove(); banner.remove(); toast.remove(); hint.remove();
+    style.remove(); highlight.remove(); label.remove(); banner.remove(); toast.remove(); hint.remove(); commentPopover.remove();
+    clearAllSelections();
     document.documentElement.style.cursor = "";
     document.removeEventListener("mousemove", onMouseMove, true);
     document.removeEventListener("click", onClick, true);
@@ -659,14 +953,17 @@ function _initOverlay() {
 
   // Re-position highlight on scroll (element moves but mouse doesn't)
   function onScroll() {
-    if (!inspectMode || !highlightVisible || !hoveredElement) return;
-    var rect = hoveredElement.getBoundingClientRect();
-    positionHighlight(rect.top, rect.left, rect.width, rect.height);
-    var labelH = 24, gap = 6;
-    var labelTop = rect.top - labelH - gap;
-    if (labelTop < 4) labelTop = rect.bottom + gap;
-    label.style.top = labelTop + "px";
-    label.style.left = rect.left + "px";
+    if (!inspectMode) return;
+    if (highlightVisible && hoveredElement) {
+      var rect = hoveredElement.getBoundingClientRect();
+      positionHighlight(rect.top, rect.left, rect.width, rect.height);
+      var labelH = 24, gap = 6;
+      var labelTop = rect.top - labelH - gap;
+      if (labelTop < 4) labelTop = rect.bottom + gap;
+      label.style.top = labelTop + "px";
+      label.style.left = rect.left + "px";
+    }
+    repositionAllBadges();
   }
 
   banner.addEventListener("click", function (e) { e.stopPropagation(); setInspectMode(!inspectMode); });

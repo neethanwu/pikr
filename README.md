@@ -31,10 +31,11 @@ pikr <port>                 # e.g. pikr 3000, pikr 5173
 
 1. pikr detects your project, starts the dev server if needed, and opens Chrome
 2. Click the pikr pill to toggle inspect mode
-3. Hover to highlight elements, click to capture
-4. Structured context is copied to clipboard — including source file location
-5. Paste into any terminal agent (Claude Code, Codex, OpenCode, Amp, ...)
-6. Press **ESC** to exit inspect mode
+3. Click elements to select — each gets a numbered badge
+4. Optionally click a badge to add a comment (e.g., "make this bigger")
+5. Press **Enter** or click the send icon to copy all selections to clipboard
+6. Paste into any terminal agent (Claude Code, Codex, OpenCode, Amp, ...)
+7. Press **ESC** to exit inspect mode
 
 ## What gets captured
 
