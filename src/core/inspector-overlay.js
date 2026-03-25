@@ -620,8 +620,21 @@ function _initOverlay() {
 
   function positionBadge(badge, el) {
     var rect = el.getBoundingClientRect();
-    badge.style.top = (rect.top - 6) + "px";
-    badge.style.left = (rect.right - 12) + "px";
+    var bw = 18, bh = 18, pad = 4;
+    var vw = window.innerWidth, vh = window.innerHeight;
+
+    // Default: top-right corner
+    var top = rect.top - bh / 2;
+    var left = rect.right - bw / 2;
+
+    // If top-right is off-screen, try other corners
+    if (top < pad) top = rect.top + pad;
+    if (left + bw > vw - pad) left = rect.right - bw - pad;
+    if (left < pad) left = rect.left + pad;
+    if (top + bh > vh - pad) top = rect.bottom - bh - pad;
+
+    badge.style.top = top + "px";
+    badge.style.left = left + "px";
   }
 
   function repositionAllBadges() {
@@ -667,7 +680,7 @@ function _initOverlay() {
     selectedElements.push({ el: el, data: data, comment: "", badge: badge, originalOutline: el.style.outline });
 
     // Add selection border to element
-    el.style.outline = "2px solid " + T.accentBorder;
+    el.style.outline = "2px solid " + T.success;
 
     renderBanner();
     showToast("+" + data.tagName);
