@@ -15,6 +15,9 @@ export type { InstallSkillOptions } from "./install-skill.js";
 
 export { detectDevServer, detectDevServers } from "./detect.js";
 
+export { findDevScript, detectPackageManager, startDevServer } from "./dev-server.js";
+export type { DevServerResult } from "./dev-server.js";
+
 export { PluginManager } from "./plugins.js";
 export type { PikrPlugin, PluginEnrichment } from "./plugins.js";
 

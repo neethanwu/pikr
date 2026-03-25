@@ -11,6 +11,8 @@ import {
   writeSelection,
   defaultLogPath,
   detectDevServers,
+  findDevScript,
+  startDevServer,
   PluginManager,
   reactPlugin,
   vuePlugin,
@@ -82,12 +84,42 @@ program
             const servers = await detectDevServers();
 
             if (servers.length === 0) {
-              console.error(`\n  ${BRAND} ${DIM}no dev server found${RESET}\n`);
-              console.error(`  ${DIM}Usage:${RESET}  pikr              ${DIM}auto-detect${RESET}`);
-              console.error(`          pikr <port>        ${DIM}e.g. pikr 3000${RESET}`);
-              console.error(`          pikr <url>         ${DIM}e.g. pikr localhost:3000${RESET}\n`);
-              process.exit(1);
-              return;
+              // No server running — try to auto-start from package.json
+              const scriptName = findDevScript(process.cwd());
+              if (scriptName) {
+                log(`starting dev server (${scriptName})...`);
+                let devProcess: import("node:child_process").ChildProcess | null = null;
+                try {
+                  const result = await startDevServer(process.cwd(), scriptName, (line) => {
+                    console.error(`  ${DIM}${line}${RESET}`);
+                  });
+                  targetUrl = result.url;
+                  devProcess = result.process;
+                  log(`server ready at ${targetUrl}`);
+
+                  // Clean up dev server when pikr exits
+                  const killDev = () => {
+                    if (devProcess && !devProcess.killed) {
+                      devProcess.kill();
+                    }
+                  };
+                  process.on("exit", killDev);
+                  process.on("SIGINT", killDev);
+                  process.on("SIGTERM", killDev);
+                } catch (err) {
+                  const msg = err instanceof Error ? err.message : String(err);
+                  console.error(`\n  ${BRAND} ${DIM}${msg}${RESET}\n`);
+                  process.exit(1);
+                  return;
+                }
+              } else {
+                console.error(`\n  ${BRAND} ${DIM}no dev server found${RESET}\n`);
+                console.error(`  ${DIM}Usage:${RESET}  pikr              ${DIM}auto-detect${RESET}`);
+                console.error(`          pikr <port>        ${DIM}e.g. pikr 3000${RESET}`);
+                console.error(`          pikr <url>         ${DIM}e.g. pikr localhost:3000${RESET}\n`);
+                process.exit(1);
+                return;
+              }
             } else if (servers.length === 1) {
               targetUrl = servers[0].url;
               log(`found ${targetUrl}`);
